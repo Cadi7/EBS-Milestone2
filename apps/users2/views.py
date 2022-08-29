@@ -1,30 +1,30 @@
+import datetime
+import jwt
 from django.contrib.auth import get_user_model
-from drf_util.decorators import serialize_decorator
-from rest_framework import viewsets, generics
-from rest_framework.generics import GenericAPIView, get_object_or_404
-from rest_framework.permissions import AllowAny
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.contrib.auth.models import User
 from rest_framework.exceptions import AuthenticationFailed
-from .serializers import UserSerializer, LoginSerializer
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import User
-import jwt, datetime
+from .serializers import UserSerializer, LoginSerializer
 
 
 # Create your views here.
-class RegisterView(generics.ListCreateAPIView):
+class RegisterView(GenericAPIView):
     allowed_methods = ["POST"]
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
 
-class LoginView(generics.ListCreateAPIView):
+class LoginView(GenericAPIView):
     allowed_methods = ["POST"]
     serializer_class = LoginSerializer
-    authentication_classes = ()
 
-    def post(self, request, **kwargs):
+    @staticmethod
+    def post(request, **kwargs):
 
         email = request.data['email']
         password = request.data['password']
@@ -58,13 +58,20 @@ class UsersView(GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    allowed_methods = ["GET"]
 
     @staticmethod
     def get(request):
-        user = User.objects.all()
-        context = UserSerializer(user).data,
+        # users = get_user_model().objects.all()
+        # user = UserSerializer(users).data
+        users = User.objects.values_list('id', 'first_name', 'last_name')
 
-        return Response(context)
+       ## context = {
+         ##   'id': users.id,
+           ## 'first_name': users.first_name,
+           ## 'last_name': users.last_name
+        ##}
+        return Response(users)
 
 
 class UserView(APIView):
