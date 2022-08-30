@@ -21,6 +21,19 @@ class TaskViewId(GenericAPIView):
         return Response(TaskSerializerID(task).data)
 
 
+class AssignTaskView(GenericAPIView):
+    serializer_class = TaskAssignSerializer
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+
+    def put(self, request):
+        user = User.objects.filter(id=request.data['user']).first()
+        task = Task.objects.filter(id=request.data['id']).first()
+        task.user = user
+        task.save()
+        return Response(TaskSerializerID(task).data)
+
+
 class MyTaskView(ListAPIView):
     serializer_class = TaskSerializerID
     permission_classes = (AllowAny,)
@@ -37,12 +50,6 @@ class CompletedTaskView(ListAPIView):
 
     def get_queryset(self):
         return Task.objects.all().filter(user=self.request.user.id, status=True)
-
-class TaskView2(GenericAPIView):
-    serializer_class = TaskSerializer
-    permission_classes = (AllowAny,)
-    authentication_classes = ()
-    allowed_methods = ["GET", "POST"]
 
 
 class TaskView(GenericAPIView):
