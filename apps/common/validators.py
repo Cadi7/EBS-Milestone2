@@ -35,6 +35,6 @@ class ObjectIdValidator(object):
             'object_id': value
         })
         if not serializer.is_valid():
-            raise serializers.ValidationError(serializer.errors.get('object_id'))
+            raise serializers.ValidationError(serializer.errors.get())
 
         return value

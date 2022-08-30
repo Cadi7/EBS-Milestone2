@@ -37,7 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'drf_yasg',
-    'apps.users2'
+    'drf_util',
+    'apps.users',
+    'apps.tasks',
 ]
 
 MIDDLEWARE = [
@@ -116,4 +118,4 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-AUTH_USER_MODEL = 'users2.User'
+AUTH_USER_MODEL = 'users.User'
