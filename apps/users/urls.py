@@ -9,5 +9,5 @@ urlpatterns = [
     path('login', LoginView.as_view()),
    # path('<int:pk>', UserView.as_view()),
     path('', UsersView.as_view()),
-    path('logout', LogoutView.as_view()),
+    #path('logout', LogoutView.as_view()),
 ]
