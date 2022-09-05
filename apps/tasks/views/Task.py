@@ -16,77 +16,15 @@ from apps.tasks.serializers import TaskSerializer, TaskShowSerializer, TaskSeria
     TaskSerializerComplete, CommentSerializer
 
 
-class MyTaskView(viewsets.ViewSet):
-    serializer_class = TaskSerializerID
-    permission_classes = (AllowAny,)
-    queryset = Task.objects.all()
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-
-    def list(self):
-        return Task.objects.all().filter(user=self.request.user.id)
-
-
-class CompletedTaskView(viewsets.ViewSet):
-    serializer_class = TaskSerializerID
-    permission_classes = (AllowAny,)
-    queryset = Task.objects.all().filter(status=True)
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-
-    def get_object(self):
-        obj = get_object_or_404(pk=self.request.GET.get('pk'))
-        return obj
-
-    @staticmethod
-    def list(pk=None):
-        queryset = Task.objects.all().filter(status=True)
-        serializer = TaskSerializerID(queryset, many=True)
-        return Response(serializer.data)
-
-
-class UpdateOwner(viewsets.ViewSet):
-    queryset = Task.objects.all()
-
-    def get_object(self):
-        serializer_class = TaskAssignSerializer
-        permission_classes = (AllowAny,)
-        authentication_classes = ()
-        obj = get_object_or_404(pk=self.request.GET.get('pk'))
-        return obj
-
-
-@action(detail=True, methods=['put'])
-def assign(request):
-    user = User.objects.filter(id=request.data['user']).first()
-    task = Task.objects.filter(id=request.data['id']).first()
-    task.user = user
-    task.save()
-    return Response(TaskSerializerID(task), status=status.HTTP_200_OK)
-
-
-class CompleteTask(viewsets.ViewSet):
-    serializer_class = TaskSerializerComplete
-    permission_classes = (AllowAny,)
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-
-    @action(detail=True, methods=['put'])
-    def complete(self, request, pk=None):
-        task = Task.objects.get(id=pk)
-        serializer_class = TaskSerializerComplete
-        serializer = TaskSerializerComplete(task, data={"id": task.id, "status": True})
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
-
-
 class TaskView(viewsets.ModelViewSet):
-    serializer_class = TaskSerializer
     permission_classes = (AllowAny,)
     queryset = Task.objects.all()
+    serializer_class = TaskSerializer
     authentication_classes = [SessionAuthentication, BasicAuthentication]
+
+    def get_object(self):
+        obj = get_object_or_404(pk=self.request.GET.get('pk'))
+        return obj
 
     @serialize_decorator(TaskSerializer)
     def create(self, request):
@@ -124,8 +62,44 @@ class TaskView(viewsets.ModelViewSet):
         task.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(detail=False, url_path=r'mytasks')
+    def my_tasks(self, request):
+        queryset = Task.objects.all().filter(user=self.request.user.id)
+        serializer = TaskSerializer(queryset, many=True)
 
-class CommentToTask(viewsets.ViewSet):
+        return Response(serializer.data)
+
+    @action(detail=False, url_path=r'completed')
+    def completed_tasks(self, request):
+        queryset = Task.objects.all().filter(status=True)
+        serializer = TaskSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['put'])
+    def complete(self, request, pk=None):
+        task = Task.objects.get(id=pk)
+        serializer = TaskSerializerComplete(task, data={"id": task.id, "status": True})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['put'], url_path=r'assign')
+    def updateowner(self, request):
+
+        user = User.objects.filter(id=request.data['user']).first()
+        task = Task.objects.filter(id=request.data['id']).first()
+        serializer = TaskAssignSerializer(task)
+        task.user = user
+        task.save()
+        return Response(serializer.data)
+
+
+class Comments(viewsets.ViewSet):
     serializer_class = CommentSerializer
     permission_classes = (AllowAny,)
     queryset = Comment.objects.all()
@@ -135,11 +109,20 @@ class CommentToTask(viewsets.ViewSet):
         obj = get_object_or_404(pk=self.request.GET.get('pk'))
         return obj
 
-    @staticmethod
-    def create(request, pk=None):
+    @serialize_decorator(CommentSerializer)
+    @action(detail=False, methods=['post'])
+    def comment(self, request):
         validated_data = request.serializer.validated_data
         comment = Comment.objects.create(
             comment=validated_data['comment'],
             task=validated_data['task'],
         )
         return Response(TaskSerializer(comment).data)
+
+    def list(self, request):
+        queryset = Comment.objects.all().filter(task=self.request.task.id)
+        serializer = CommentSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+
