@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.tasks.models import Task
+from apps.tasks.models import Task, Comment
 
 
 class TaskShowSerializer(serializers.ModelSerializer):
@@ -35,5 +35,30 @@ class TaskSerializer(serializers.ModelSerializer):
         instance = self.Meta.model(**validated_data)
         if owner is not None:
             instance.owner = owner
+        instance.save()
+        return instance
+
+
+class TaskSerializerComplete(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['id', 'status']
+
+    def update(self, instance, validated_data):
+        instance.status = validated_data.get('status', instance.status)
+        instance.save()
+        return instance
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'comment', 'task']
+
+    def create(self, validated_data):
+        task = validated_data.pop('task', None)
+        instance = self.Meta.model(**validated_data)
+        if task is not None:
+            instance.task = task
         instance.save()
         return instance
