@@ -1,20 +1,33 @@
 import datetime
 
 import jwt
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.viewsets import GenericViewSet
 from validate_email import validate_email
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
+
+from apps.users import serializers
 from apps.users.models import User
-from apps.users.serializers import LoginSerializer, UserSerializer
+from apps.users.serializers import LoginSerializer, UserSerializer, ShortUserSerializer
 
 
-class RegisterView(viewsets.ModelViewSet):
-    serializer_class = UserSerializer
+class RegisterView(mixins.RetrieveModelMixin,
+                   mixins.DestroyModelMixin,
+                   mixins.ListModelMixin,
+                   GenericViewSet):
+    serializer_class = ShortUserSerializer
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
+
+    def get_serializer_class(self):
+        if self.action == 'register':
+            return serializers.UserSerializer
+        elif self.action == 'login':
+            return serializers.LoginSerializer
+        return serializers.ShortUserSerializer
 
     @action(detail=False, methods=['post'], url_path=r'register')
     def register(self, request):
@@ -30,9 +43,6 @@ class RegisterView(viewsets.ModelViewSet):
         user.save()
 
         return Response(self.serializer_class(user).data, status=201)
-
-    serializer_class = LoginSerializer
-    permission_classes = (AllowAny,)
 
     @action(detail=False, methods=['post'], url_path=r'login')
     def login(self, request):
@@ -73,5 +83,3 @@ class RegisterView(viewsets.ModelViewSet):
         }
 
         return response
-
-

@@ -23,6 +23,10 @@ class TaskAssignSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = Task
         fields = ['id', 'title', 'description', 'created_at', 'updated_at', 'status', 'user']

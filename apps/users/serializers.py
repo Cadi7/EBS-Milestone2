@@ -30,3 +30,6 @@ class LoginSerializer(serializers.ModelSerializer):
         model = User
         fields = ['email', 'password']
 
+
+class Default:
+    pass

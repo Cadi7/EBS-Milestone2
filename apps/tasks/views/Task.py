@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.tasks import serializers
 from apps.tasks.models import Task, Comment
 from apps.tasks.serializers import TaskSerializer, TaskAssignSerializer, \
     TaskSerializerComplete, CommentSerializer
@@ -16,6 +17,24 @@ class TaskView(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     authentication_classes = [SessionAuthentication, BasicAuthentication]
+
+    def get_serializer_class(self):
+
+        if self.action == 'assign':
+            return serializers.TaskAssignSerializer
+        elif self.action == 'my_tasks':
+            return serializers.TaskSerializer
+        elif self.action == 'completed_tasks':
+            return serializers.TaskShowSerializer
+        elif self.action == 'comments':
+            return serializers.CommentSerializer
+        elif self.action == 'create_comment':
+            return serializers.CommentSerializer
+        elif self.action == 'list':
+            return serializers.TaskShowSerializer
+        elif self.action == 'retrieve':
+            return serializers.TaskShowSerializer
+        return serializers.TaskSerializer
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -34,11 +53,6 @@ class TaskView(viewsets.ModelViewSet):
 
         return Response(serializer.data)
 
-    serializer_class = CommentSerializer
-    permission_classes = (IsAuthenticated,)
-    queryset = Comment.objects.all()
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-
     @serialize_decorator(CommentSerializer)
     @action(detail=False, methods=['post'], url_path=r'comments')
     def comment_create(self, request):
@@ -51,18 +65,9 @@ class TaskView(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path=r'comments')
     def comments(self, request):
-        queryset = self.get_queryset()
+        queryset = Comment.objects.all()
         serializer = CommentSerializer(queryset, many=True)
         return Response(serializer.data)
-
-    @staticmethod
-    def get_queryset():
-        return Comment.objects.all()
-
-    permission_classes = (IsAuthenticated,)
-    queryset = Task.objects.all()
-    serializer_class = TaskAssignSerializer
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
 
     @action(detail=False, methods=['put'], url_path=r'assign')
     def assign(self, request, pk=None):
@@ -92,7 +97,3 @@ class CompleteTask(viewsets.ViewSet):
         else:
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
