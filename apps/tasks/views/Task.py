@@ -1,9 +1,7 @@
 from django.contrib.auth.models import User
 from drf_util.decorators import serialize_decorator
-from rest_framework import viewsets, status
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.tasks import serializers
@@ -13,10 +11,8 @@ from apps.tasks.serializers import TaskSerializer, TaskAssignSerializer, \
 from apps.users.models import User
 
 
-class TaskView(viewsets.ModelViewSet):
+class TaskView(viewsets.ModelViewSet, filters.SearchFilter):
     queryset = Task.objects.all()
-    serializer_class = TaskSerializer
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
 
     def get_serializer_class(self):
 
@@ -28,12 +24,14 @@ class TaskView(viewsets.ModelViewSet):
             return serializers.TaskShowSerializer
         elif self.action == 'comments':
             return serializers.CommentSerializer
-        elif self.action == 'create_comment':
+        elif self.action == 'comment_create':
             return serializers.CommentSerializer
         elif self.action == 'list':
-            return serializers.TaskShowSerializer
+            return serializers.TaskSerializer
         elif self.action == 'retrieve':
             return serializers.TaskShowSerializer
+        elif self.action == 'search':
+            return serializers.TaskSerializer
         return serializers.TaskSerializer
 
     def perform_create(self, serializer):
@@ -54,7 +52,7 @@ class TaskView(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @serialize_decorator(CommentSerializer)
-    @action(detail=False, methods=['post'], url_path=r'comments')
+    @action(detail=False, methods=['post'], url_path=r'comments/add')
     def comment_create(self, request):
         validated_data = request.serializer.validated_data
         comment = Comment.objects.create(
@@ -69,6 +67,18 @@ class TaskView(viewsets.ModelViewSet):
         serializer = CommentSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'], url_path=r'comments')
+    def comment(self, request, pk=None):
+        queryset = Comment.objects.all().filter(task=self.kwargs['pk'])
+        serializer = CommentSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path=r'search/<str:title>')
+    def search(self, view, request):
+        if request.query_params.get('title'):
+            return ['title', 'description']
+        return super().get_search_fields(view, request)
+
     @action(detail=False, methods=['put'], url_path=r'assign')
     def assign(self, request, pk=None):
         task = Task.objects.get(id=request.data['id'])
@@ -77,14 +87,17 @@ class TaskView(viewsets.ModelViewSet):
 
         task.user = user
         task.save()
-        return Response(serializer.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class CompleteTask(viewsets.ViewSet):
-    permission_classes = (IsAuthenticated,)
     queryset = Task.objects.all()
     serializer_class = TaskSerializerComplete
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
 
     @action(detail=True, methods=['put'])
     def complete(self, request, pk=None):

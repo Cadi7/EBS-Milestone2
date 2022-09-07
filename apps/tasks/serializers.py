@@ -30,15 +30,12 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title', 'description', 'created_at', 'updated_at', 'status', 'user']
-        extra_kwargs = {
-            'owner': {'write_only': True}
-        }
 
     def create(self, validated_data):
-        owner = validated_data.pop('owner', None)
+        user = validated_data.pop('owner', None)
         instance = self.Meta.model(**validated_data)
-        if owner is not None:
-            instance.owner = owner
+        if user is not None:
+            instance.owner = user
         instance.save()
         return instance
 
@@ -55,14 +52,17 @@ class TaskSerializerComplete(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = Comment
-        fields = ['id', 'comment', 'task']
+        fields = ['id', 'comment', 'task', 'user']
 
     def create(self, validated_data):
-        task = validated_data.pop('task', None)
+        user = validated_data.pop('owner', None)
         instance = self.Meta.model(**validated_data)
-        if task is not None:
-            instance.task = task
+        if user is not None:
+            instance.owner = user
         instance.save()
         return instance
+
