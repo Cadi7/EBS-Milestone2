@@ -1,8 +1,11 @@
-from django.contrib.auth.models import User
+
 from drf_util.decorators import serialize_decorator
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, mixins
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from apps.tasks import serializers
 from apps.tasks.models import Task, Comment
@@ -11,8 +14,13 @@ from apps.tasks.serializers import TaskSerializer, TaskAssignSerializer, \
 from apps.users.models import User
 
 
-class TaskView(viewsets.ModelViewSet, filters.SearchFilter):
+class TaskView(mixins.RetrieveModelMixin,
+               mixins.DestroyModelMixin,
+               mixins.ListModelMixin,
+               GenericViewSet, filters.SearchFilter):
     queryset = Task.objects.all()
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
 
@@ -27,17 +35,29 @@ class TaskView(viewsets.ModelViewSet, filters.SearchFilter):
         elif self.action == 'comment_create':
             return serializers.CommentSerializer
         elif self.action == 'list':
-            return serializers.TaskSerializer
+            return serializers.TaskShowSerializer
         elif self.action == 'retrieve':
             return serializers.TaskShowSerializer
         elif self.action == 'search':
             return serializers.TaskSerializer
-        return serializers.TaskSerializer
+        elif self.action == 'create':
+            return serializers.TaskSerializer
+        elif self.action == 'task_create':
+            return serializers.TaskSerializer
+        return serializers.TaskShowSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    @serialize_decorator(TaskSerializer)
+    @action(detail=False, methods=['post'], url_path=r'add')
+    def task_create(self, request):
+        validated_data = request.serializer.validated_data
+        task = Task.objects.create(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            user=self.request.user,
+        )
+        return Response(TaskSerializer(task).data)
 
-    @action(detail=False, url_path=r'mytasks')
+    @action(detail=False, methods=['get'], url_path=r'mytasks')
     def my_tasks(self, request):
         queryset = Task.objects.all().filter(user=self.request.user.id)
         serializer = TaskSerializer(queryset, many=True)

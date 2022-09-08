@@ -15,4 +15,3 @@ class Task(models.Model):
 class Comment(models.Model):
     comment = models.TextField()
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)

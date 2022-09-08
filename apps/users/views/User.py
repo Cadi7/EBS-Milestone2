@@ -2,6 +2,7 @@ import jwt
 from django.contrib.auth.models import User
 from rest_framework import viewsets, status
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.users.models import User
 from apps.users.serializers import UserSerializer, ShortUserSerializer
@@ -9,6 +10,7 @@ from apps.users.serializers import UserSerializer, ShortUserSerializer
 
 class UserView(viewsets.ModelViewSet):
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
 
     @staticmethod

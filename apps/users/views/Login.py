@@ -1,17 +1,17 @@
 import datetime
-
 import jwt
-from rest_framework import viewsets, mixins
+from rest_framework import mixins, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from validate_email import validate_email
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.response import Response
 
 from apps.users import serializers
 from apps.users.models import User
-from apps.users.serializers import LoginSerializer, UserSerializer, ShortUserSerializer
+from apps.users.serializers import ShortUserSerializer, LoginSerializer
 
 
 class RegisterView(mixins.RetrieveModelMixin,
@@ -20,17 +20,21 @@ class RegisterView(mixins.RetrieveModelMixin,
                    GenericViewSet):
     serializer_class = ShortUserSerializer
     queryset = User.objects.all()
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
 
     def get_serializer_class(self):
         if self.action == 'register':
             return serializers.UserSerializer
         elif self.action == 'login':
             return serializers.LoginSerializer
-        return serializers.ShortUserSerializer
+        elif self.action == 'list':
+            return serializers.ShortUserSerializer
+        return serializers.UserSerializer
 
     @action(detail=False, methods=['post'], url_path=r'register')
     def register(self, request):
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
         email = request.data.get('email')
         password = request.data.get('password')
         if not validate_email(email):
@@ -39,7 +43,7 @@ class RegisterView(mixins.RetrieveModelMixin,
         if User.objects.filter(email=email).exists():
             raise AuthenticationFailed('Email is already in use!')
 
-        user = User.objects.create_user(email=email, password=password)
+        user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email, password=password)
         user.save()
 
         return Response(self.serializer_class(user).data, status=201)
@@ -55,29 +59,14 @@ class RegisterView(mixins.RetrieveModelMixin,
 
         if not user.check_password(password):
             raise AuthenticationFailed('Incorrect password!')
+        token = Token.objects.get_or_create(user=user)
 
-        payload = {
-            'id': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
-            'iat': datetime.datetime.utcnow()
-        }
+        return Response({'token': token[0].key}, status=200)
 
-        token = jwt.encode(payload, 'secret', algorithm='HS256')
-
-        response = Response()
-
-        response.set_cookie(key='jwt', value=token, httponly=True)
-        response.data = {
-            'jwt': token
-        }
-
-        return response
-
-    @staticmethod
     def logout(request):
         response = Response()
 
-        response.delete_cookie('jwt')
+        response.delete_cookie('token')
         response.data = {
             'message': 'success'
         }
