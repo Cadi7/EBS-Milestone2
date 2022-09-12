@@ -4,4 +4,4 @@ from apps import tasks
 
 
 class TasksConfig(AppConfig):
-    name = 'tasks'
+    name = 'apps.tasks'

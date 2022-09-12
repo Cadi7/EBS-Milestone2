@@ -1,7 +1,6 @@
-
 from drf_util.decorators import serialize_decorator
 from rest_framework import viewsets, status, filters, mixins
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -17,10 +16,16 @@ from apps.users.models import User
 class TaskView(mixins.RetrieveModelMixin,
                mixins.DestroyModelMixin,
                mixins.ListModelMixin,
-               GenericViewSet, filters.SearchFilter):
+               GenericViewSet, ):
     queryset = Task.objects.all()
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    authentication_classes = [JWTAuthentication]
+    search_fields = ['title', 'description']
+    filter_backends = (filters.SearchFilter,)
+
+    def get_permissions(self):
+        if self.action in ('create', 'list', 'retrieve'):
+            self.permission_classes = [IsAuthenticated]
+        return super(TaskView, self).get_permissions()
 
     def get_serializer_class(self):
 
@@ -44,6 +49,8 @@ class TaskView(mixins.RetrieveModelMixin,
             return serializers.TaskSerializer
         elif self.action == 'task_create':
             return serializers.TaskSerializer
+        elif self.action == 'complete':
+            return serializers.TaskSerializerComplete
         return serializers.TaskShowSerializer
 
     @serialize_decorator(TaskSerializer)
@@ -93,11 +100,17 @@ class TaskView(mixins.RetrieveModelMixin,
         serializer = CommentSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'], url_path=r'search/<str:title>')
-    def search(self, view, request):
-        if request.query_params.get('title'):
-            return ['title', 'description']
-        return super().get_search_fields(view, request)
+    @action(detail=True, methods=['put'])
+    def complete(self, request, pk=None):
+        task = Task.objects.get(id=pk)
+        serializer = TaskSerializerComplete(task, data={"id": task.id, "status": True})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['put'], url_path=r'assign')
     def assign(self, request, pk=None):
@@ -107,23 +120,6 @@ class TaskView(mixins.RetrieveModelMixin,
 
         task.user = user
         task.save()
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
-
-
-class CompleteTask(viewsets.ViewSet):
-    queryset = Task.objects.all()
-    serializer_class = TaskSerializerComplete
-
-    @action(detail=True, methods=['put'])
-    def complete(self, request, pk=None):
-        task = Task.objects.get(id=pk)
-        serializer = TaskSerializerComplete(task, data={"id": task.id, "status": True})
-
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
