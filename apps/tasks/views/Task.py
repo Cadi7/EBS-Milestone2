@@ -1,111 +1,141 @@
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_util.decorators import serialize_decorator
-from rest_framework import viewsets, status, filters, mixins
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from rest_framework import filters, status
 from rest_framework.decorators import action
+from rest_framework.mixins import (
+    ListModelMixin,
+    RetrieveModelMixin,
+    CreateModelMixin,
+    DestroyModelMixin,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from apps.tasks import serializers
-from django.core.mail import send_mail
-from apps.tasks.models import Task, Comment
-from apps.tasks.serializers import TaskSerializer, TaskAssignSerializer, \
-    TaskSerializerComplete, CommentSerializer
-from apps.users.models import User
+from apps.tasks.models import (
+    Task,
+    Comment,
+)
+from apps.tasks.serializers import (
+    TaskSerializer,
+    TaskListSerializer,
+    TaskAssignNewUserSerializer,
+    TaskUpdateStatusSerializer,
+    CommentSerializer,
+)
 from config import settings
+from config.settings import EMAIL_HOST_USER
+
+User = get_user_model()
+
+__all__ = [
+    'TaskViewSet',
+    'TaskCommentViewSet',
+]
 
 
-class TaskView(mixins.RetrieveModelMixin,
-               mixins.DestroyModelMixin,
-               mixins.ListModelMixin,
-               mixins.UpdateModelMixin,
-               GenericViewSet,
-               filters.SearchFilter, ):
+class TaskViewSet(
+    ListModelMixin,
+    RetrieveModelMixin,
+    CreateModelMixin,
+    DestroyModelMixin,
+    GenericViewSet
+):
     queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = (IsAuthenticated,)
     authentication_classes = [JWTAuthentication]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['status']
+    filter_backends = [filters.SearchFilter]
+    # filterset_fields = ['status']
     search_fields = ['title']
 
-    def get_permissions(self):
-        if self.action in ('create', 'list', 'retrieve', 'update'):
-            self.permission_classes = [IsAuthenticated]
-        return super(TaskView, self).get_permissions()
-
     def get_serializer_class(self):
+        if self.action == 'list':
+            return TaskListSerializer
+        return super(TaskViewSet, self).get_serializer_class()
 
-        if self.action == 'assign':
-            return serializers.TaskAssignSerializer
-        elif self.action == 'my_tasks':
-            return serializers.TaskSerializer
-        elif self.action == 'completed_tasks':
-            return serializers.TaskShowSerializer
-        elif self.action == 'list':
-            return serializers.TaskShowSerializer
-        elif self.action == 'retrieve':
-            return serializers.TaskShowSerializer
-        elif self.action == 'create':
-            return serializers.TaskSerializer
-        elif self.action == 'task_create':
-            return serializers.TaskSerializer
-        elif self.action == 'complete':
-            return serializers.TaskSerializerComplete
-        return serializers.TaskShowSerializer
+    def perform_create(self, serializer):
+        serializer.save(assigned_to=[self.request.user])
 
-    @serialize_decorator(TaskSerializer)
-    @action(detail=False, methods=['post'], url_path=r'add')
-    def task_create(self, request):
-        validated_data = request.serializer.validated_data
-        task = Task.objects.create(
-            title=validated_data['title'],
-            description=validated_data['description'],
-            user=self.request.user,
+    @action(
+        methods=['get'],
+        url_path='my_task',
+        detail=False,
+        serializer_class=TaskListSerializer
+    )
+    def my_task(self, request, *args, **kwargs):
+        queryset = self.queryset.filter(
+            assigned_to=request.user
         )
-        return Response(TaskSerializer(task).data)
-
-    @action(detail=False, methods=['get'], url_path=r'mytasks')
-    def my_tasks(self, request):
-        queryset = Task.objects.all().filter(user=self.request.user.id)
-        serializer = TaskSerializer(queryset, many=True)
-
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, url_path=r'completed')
-    def completed_tasks(self, request):
-        queryset = Task.objects.all().filter(status=True)
-        serializer = TaskSerializer(queryset, many=True)
-
+    @action(
+        methods=['get'],
+        url_path='completed_tasks',
+        detail=False,
+        serializer_class=TaskListSerializer
+    )
+    def complete_task(self, request, *args, **kwargs):
+        queryset = self.queryset.filter(
+            status=True
+        )
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
         return Response(serializer.data)
 
-    @action(detail=True, methods=['put'])
-    def complete(self, request, pk=None):
-        task = Task.objects.get(id=pk)
-        instance = self.get_object()
-        serializer = TaskSerializerComplete(task, data={"id": task.id, "status": True})
-        self.send_task_completed_email(instance.id, instance.user.email)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
-
-    @action(methods=['patch'], detail=True, url_path='assign', permission_classes=[IsAuthenticated])
+    @action(
+        methods=['patch'],
+        detail=True,
+        url_path='assign',
+        serializer_class=TaskAssignNewUserSerializer
+    )
     def assign(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        instance.assigned_to = serializer.validated_data.get('assigned_to')
-        instance.save()
-        self.send_task_assigned_email(instance.id, instance.assigned_to.email)
+        instance: Task = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data
+        )
+        serializer.is_valid(
+            raise_exception=True
+        )
+        serializer.save()
+        instance.send_user_email(
+            subject=f'Task with id:{instance.id} is assigned to you',
+            message='Task assign to you',
+            recipient= self.request.user.email
+        )
         return Response(status=status.HTTP_200_OK)
 
-    @classmethod
-    def send_task_completed_email(cls, task_id, recipient):
-        send_mail('Task is completed',
-                  f'Task {task_id} is completed',
-                  settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
+    @action(
+        methods=['get'],
+        detail=True,
+        url_path='update',
+        serializer_class=TaskUpdateStatusSerializer
+    )
+    def update_status(self, request, *args, **kwargs):
+        instance: Task = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data
+        )
+        serializer.is_valid(
+            raise_exception=True
+        )
+        serializer.save(
+            status=True
+        )
+        user_email: str = self.request.user.email
+        if user_email:
+            instance.send_user_email(
+                message='commented task is completed',
+                subject='commented task is completed',
+                recipient=user_email
+            )
+        return Response(status=status.HTTP_200_OK)
 
     @classmethod
     def send_task_assigned_email(cls, task_id, recipient):
@@ -114,35 +144,40 @@ class TaskView(mixins.RetrieveModelMixin,
                   settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
 
 
-class CommentView(mixins.RetrieveModelMixin,
-                  mixins.DestroyModelMixin,
-                  mixins.ListModelMixin,
-                  GenericViewSet,
-                  filters.SearchFilter, ):
+class TaskCommentViewSet(
+    ListModelMixin,
+    CreateModelMixin,
+    GenericViewSet
+):
     queryset = Comment.objects.all()
-    authentication_classes = [JWTAuthentication]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['title']
     serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = [JWTAuthentication]
 
-    @serialize_decorator(CommentSerializer)
-    @action(detail=False, methods=['post'], url_path=r'comments/add')
-    def comment_create(self, request):
-        validated_data = request.serializer.validated_data
-        comment = Comment.objects.create(
-            comment=validated_data['comment'],
-            task=validated_data['task'],
+    def list(self, request, *args, **kwargs):
+        task_id: int = self.kwargs.get(
+            'task__pk'
         )
-        return Response(TaskSerializer(comment).data)
-
-    @action(detail=False, methods=['get'], url_path=r'comments')
-    def comments(self, request):
-        queryset = Comment.objects.all()
-        serializer = CommentSerializer(queryset, many=True)
+        queryset = self.queryset.filter(
+            task_id=task_id
+        )
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'], url_path=r'comments')
-    def comment(self, request, pk=None):
-        queryset = Comment.objects.all().filter(task=self.kwargs['pk'])
-        serializer = CommentSerializer(queryset, many=True)
-        return Response(serializer.data)
+    def perform_create(self, serializer):
+        task_id: int = self.kwargs.get(
+            'task__pk'
+        )
+        instance: Comment = serializer.save(
+            owner=self.request.user,
+            task_id=task_id
+        )
+        user_email: str = self.request.user.email
+        instance.task.send_user_email(
+            message=f'You task with id:{task_id} is commented',
+            subject='Your task is commented',
+            recipient=user_email
+        )

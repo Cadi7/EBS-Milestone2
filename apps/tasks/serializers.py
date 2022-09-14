@@ -1,50 +1,59 @@
+from django.contrib.auth import get_user_model
+from django.template.defaultfilters import filesizeformat
 from rest_framework import serializers
-from apps.tasks.models import Task, Comment
 
+from apps.tasks.models import (
+    Task,
+    Comment,
+)
 
-class TaskShowSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Task
-        fields = ['id', 'title']
+User = get_user_model()
 
-
-class TaskSerializerID(serializers.ModelSerializer):
-    class Meta:
-        model = Task
-        fields = ['id', 'title', 'description', 'status', 'user']
-
-
-class TaskAssignSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(required=True)
-
-    class Meta:
-        model = Task
-        fields = ['id', 'user']
+__all__ = [
+    'TaskSerializer',
+    'TaskListSerializer',
+    'TaskAssignNewUserSerializer',
+    'TaskUpdateStatusSerializer',
+    'CommentSerializer',
+]
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    title = serializers.CharField(required=False)
-    description = serializers.CharField(required=False)
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    class Meta:
+        model = Task
+        fields = '__all__'
+        extra_kwargs = {
+            'assigned_to': {'read_only': True},
+        }
+
+
+class TaskListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'created_at', 'updated_at', 'status', 'user']
+        fields = ('id', 'title')
 
 
-class TaskSerializerComplete(serializers.ModelSerializer):
+class TaskAssignNewUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['id', 'status']
+        fields = ('assigned_to',)
 
-    def update(self, instance, validated_data):
-        instance.status = validated_data.get('status', instance.status)
-        instance.save()
-        return instance
+
+class TaskUpdateStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ('status',)
+        extra_kwargs = {
+            'status': {'read_only': True}
+        }
 
 
 class CommentSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Comment
-        fields = ['id', 'comment', 'task']
+        fields = '__all__'
+        extra_kwargs = {
+            'task': {'read_only': True},
+            'owner': {'read_only': True}
+        }
