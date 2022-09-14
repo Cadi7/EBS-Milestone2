@@ -50,13 +50,13 @@ class TaskViewSet(
     # filterset_fields = ['status']
     search_fields = ['title']
 
+    def perform_create(self, serializer):
+        serializer.save(assigned_to=[self.request.user])
+
     def get_serializer_class(self):
         if self.action == 'list':
             return TaskListSerializer
         return super(TaskViewSet, self).get_serializer_class()
-
-    def perform_create(self, serializer):
-        serializer.save(assigned_to=[self.request.user])
 
     @action(
         methods=['get'],
@@ -103,10 +103,12 @@ class TaskViewSet(
             raise_exception=True
         )
         serializer.save()
+        user_email: str = request.task.assigned_to.email
+        print(user_email)
         instance.send_user_email(
             subject=f'Task with id:{instance.id} is assigned to you',
             message='Task assign to you',
-            recipient= self.request.user.email
+            recipient=user_email
         )
         return Response(status=status.HTTP_200_OK)
 

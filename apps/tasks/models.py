@@ -27,9 +27,7 @@ class Task(models.Model):
         default=False,
         verbose_name='Completed'
     )
-    assigned_to = models.ManyToManyField(
-        User, related_name='tasks', blank=True
-    )
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
 
     class Meta:
         verbose_name = 'Task'
