@@ -23,7 +23,7 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = '__all__'
         extra_kwargs = {
-            'assigned_to': {'read_only': True},
+            'assigned': {'read_only': True},
         }
 
 
@@ -37,7 +37,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 class TaskAssignNewUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ('assigned_to',)
+        fields = ('assigned',)
 
 
 class TaskUpdateStatusSerializer(serializers.ModelSerializer):

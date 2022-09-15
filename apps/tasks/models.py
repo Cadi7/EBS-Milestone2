@@ -27,7 +27,7 @@ class Task(models.Model):
         default=False,
         verbose_name='Completed'
     )
-    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
+    assigned = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_tasks')
 
     class Meta:
         verbose_name = 'Task'
@@ -50,17 +50,8 @@ class Task(models.Model):
 
 class Comment(models.Model):
     text = models.TextField()
-    task = models.ForeignKey(
-        Task,
-        on_delete=models.CASCADE,
-        null=True,
-        related_name='comments'
-    )
-    owner = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='comments'
-    )
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='comments')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
 
     class Meta:
         verbose_name = 'Comment'

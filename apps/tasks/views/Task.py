@@ -51,7 +51,7 @@ class TaskViewSet(
     search_fields = ['title']
 
     def perform_create(self, serializer):
-        serializer.save(assigned_to=[self.request.user])
+        serializer.save(assigned_id=self.request.user.id)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -66,7 +66,7 @@ class TaskViewSet(
     )
     def my_task(self, request, *args, **kwargs):
         queryset = self.queryset.filter(
-            assigned_to=request.user
+            assigned=request.user.id
         )
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
@@ -103,11 +103,11 @@ class TaskViewSet(
             raise_exception=True
         )
         serializer.save()
-        user_email: str = request.task.assigned_to.email
+        user_email: str = instance.assigned.email
         print(user_email)
         instance.send_user_email(
-            subject=f'Task with id:{instance.id} is assigned to you',
-            message='Task assign to you',
+            subject=f'Task with id:{instance.id} and title: {instance.title} is assigned to you',
+            message='Task assign to you, please check your task list',
             recipient=user_email
         )
         return Response(status=status.HTTP_200_OK)
@@ -118,32 +118,27 @@ class TaskViewSet(
         url_path='update',
         serializer_class=TaskUpdateStatusSerializer
     )
-    def update_status(self, request, *args, **kwargs):
-        instance: Task = self.get_object()
-        serializer = self.get_serializer(
-            instance,
-            data=request.data
-        )
-        serializer.is_valid(
-            raise_exception=True
-        )
-        serializer.save(
-            status=True
-        )
-        user_email: str = self.request.user.email
-        if user_email:
-            instance.send_user_email(
-                message='commented task is completed',
-                subject='commented task is completed',
-                recipient=user_email
-            )
-        return Response(status=status.HTTP_200_OK)
+    def update_status(self, request, *args,pk=None, **kwargs):
+        task = Task.objects.get(id=pk)
+        task.status = True
+        serializer = TaskUpdateStatusSerializer(task, data={"id": task.id, "status": True})
 
-    @classmethod
-    def send_task_assigned_email(cls, task_id, recipient):
-        send_mail('Task is assigned',
-                  f'Task {task_id} is assigned to you',
-                  settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
+        if serializer.is_valid():
+            queryset = Comment.objects.all().filter(task_id=pk)
+
+            emails = []
+            for com in queryset:
+                if com.owner.email not in emails:
+                    emails.append(com.owner.email)
+            send_mail("Task Completed", "The task where you added a comment is completed - " + task.title,
+                      EMAIL_HOST_USER, emails)
+
+            serializer.save()
+
+            return Response("Task completed", status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class TaskCommentViewSet(
@@ -170,16 +165,13 @@ class TaskCommentViewSet(
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        task_id: int = self.kwargs.get(
-            'task__pk'
-        )
-        instance: Comment = serializer.save(
-            owner=self.request.user,
-            task_id=task_id
-        )
-        user_email: str = self.request.user.email
-        instance.task.send_user_email(
-            message=f'You task with id:{task_id} is commented',
-            subject='Your task is commented',
-            recipient=user_email
-        )
+        task_id = self.kwargs.get('task_pk')
+        task_title = Task.objects.get(id=task_id).title
+        serializer.save(owner_id=self.request.user.id, task_id=task_id)
+        self.send_task_created_email(task_id, task_title, recipient=self.request.user.email)
+
+    @classmethod
+    def send_task_created_email(cls, task_id, task_title, recipient):
+        send_mail('Your task is commented',
+                  f'Your task with id {task_id} and title' + task_title + 'is commented',
+                  settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
