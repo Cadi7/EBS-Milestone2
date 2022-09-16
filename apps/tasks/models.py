@@ -1,9 +1,6 @@
-from pathlib import Path
-from typing import Union
 
+from typing import Union
 from django.conf import settings
-from django.contrib.auth.models import Group, Permission
-from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.db import models
 from django.db.models import QuerySet, Sum
@@ -15,6 +12,7 @@ User = settings.AUTH_USER_MODEL
 __all__ = [
     'Task',
     'Comment',
+    'Timelog',
 ]
 
 
@@ -83,3 +81,85 @@ def send_email_user(sender, instance, **kwargs) -> None:
                 recipient_list=list(user_email),
                 fail_silently=False
             )
+
+
+class TimeLogQuerySet(QuerySet):
+    def with_total_time(self) -> 'TimeLogQuerySet':
+        return self.aggregate(
+            total_time=Sum('duration')
+        )
+
+
+class Timelog(models.Model):
+    objects = TimeLogQuerySet.as_manager()
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='time_logs'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='time_logs'
+    )
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    is_started = models.BooleanField(
+        default=False
+    )
+    is_stopped = models.BooleanField(
+        default=False
+    )
+    duration = models.DurationField(
+        null=True,
+        blank=True
+    )
+
+    @staticmethod
+    def get_total_duration(task_id: int) -> int:
+        return Timelog.objects.filter(
+            task_id=task_id
+        ).aggregate(
+            Sum('duration')
+        )['duration__sum'] or 0
+
+    @staticmethod
+    def get_total_duration_by_user(user_id: int) -> int:
+        return Timelog.objects.filter(
+            task__assigned_id=user_id
+        ).aggregate(
+            Sum('duration')
+        )['duration__sum'] or 0
+
+    @staticmethod
+    def get_total_duration_by_user_and_task(user_id: int, task_id: int) -> int:
+        return Timelog.objects.filter(
+            task__assigned_id=user_id,
+            task_id=task_id
+        ).aggregate(
+            Sum('duration')
+        )['duration__sum'] or 0
+
+    @staticmethod
+    def get_total_duration_by_user_and_task_and_date(user_id: int, task_id: int, date: str) -> int:
+        return Timelog.objects.filter(
+            task__assigned_id=user_id,
+            task_id=task_id,
+            start_time__date=date
+        ).aggregate(
+            Sum('duration')
+        )['duration]sum'] or 0
+
+    class Meta:
+        verbose_name = 'Time Log'
+        verbose_name_plural = 'Time Logs'
+        ordering = ['id']
+
+    def __str__(self):
+        return f'{self.id}'
+

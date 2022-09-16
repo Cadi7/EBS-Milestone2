@@ -1,10 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.template.defaultfilters import filesizeformat
 from rest_framework import serializers
 
 from apps.tasks.models import (
     Task,
-    Comment,
+    Comment, Timelog,
 )
 
 User = get_user_model()
@@ -15,6 +14,10 @@ __all__ = [
     'TaskAssignNewUserSerializer',
     'TaskUpdateStatusSerializer',
     'CommentSerializer',
+    'TimeLogSerializer',
+    'TimeLogCreateSerializer',
+    'TimeLogUserDetailSerializer',
+    'TopMonthSerializer',
 ]
 
 
@@ -28,7 +31,6 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class TaskListSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Task
         fields = ('id', 'title')
@@ -57,3 +59,40 @@ class CommentSerializer(serializers.ModelSerializer):
             'task': {'read_only': True},
             'owner': {'read_only': True}
         }
+
+
+class TimeLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Timelog
+        fields = '__all__'
+
+
+class TimeLogCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Timelog
+        fields = '__all__'
+
+        extra_kwargs = {
+            'user': {'read_only': True},
+            'task': {'read_only': True}
+        }
+
+
+class TimeLogUserDetailSerializer(serializers.ModelSerializer):
+    total_time = serializers.DurationField(read_only=True)
+
+    class Meta:
+        model = Timelog
+        fields = ('id', 'total_time', 'started_at', 'duration')
+        extra_kwargs = {
+            'started_at': {'read_only': True}
+        }
+
+
+class TopMonthSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='tasks.id')
+    title = serializers.CharField(source='tasks.title')
+
+    class Meta:
+        model = Timelog
+        fields = ('id', 'title', 'duration')

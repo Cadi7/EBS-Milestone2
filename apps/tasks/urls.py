@@ -7,6 +7,8 @@ from rest_framework_nested.routers import (
 from apps.tasks.views.Task import (
     TaskViewSet,
     TaskCommentViewSet,
+    TaskTimeLogViewSet,
+    TimeLogViewSet,
 )
 
 base_router = DefaultRouter()
@@ -15,6 +17,11 @@ base_router.register(
     prefix=r'tasks',
     viewset=TaskViewSet,
     basename='tasks'
+)
+base_router.register(
+    prefix=r'timelogs',
+    viewset=TimeLogViewSet,
+    basename='timelogs'
 )
 
 nested_router = NestedSimpleRouter(
@@ -26,6 +33,11 @@ nested_router.register(
     prefix=r'comments',
     viewset=TaskCommentViewSet,
     basename='comments'
+)
+nested_router.register(
+    prefix=r'timelogs',
+    viewset=TaskTimeLogViewSet,
+    basename='timelogs'
 )
 
 urlpatterns = [
