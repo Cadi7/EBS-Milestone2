@@ -26,7 +26,7 @@ from apps.tasks.serializers import (
     TaskAssignNewUserSerializer,
     TaskUpdateStatusSerializer,
     CommentSerializer, TimeLogSerializer, TimeLogCreateSerializer,
-    TimeLogUserDetailSerializer, TopMonthSerializer,
+    TimeLogUserDetailSerializer,
 )
 from config import settings
 from config.settings import EMAIL_HOST_USER
@@ -317,11 +317,13 @@ class TimeLogViewSet(
         methods=['get'],
         detail=False,
         url_path='top20',
-        serializer_class=TopMonthSerializer
+        serializer_class=TimeLogSerializer
     )
     def top20(self, request, *args, **kwargs):
         queryset = self.queryset.filter(
+            user=self.request.user,
             started_at__month=timezone.now().strftime('%m'),
-        ).order_by('-duration')[0:20]
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        ).order_by('-duration')[:20]
+        return Response(
+            queryset
+        )

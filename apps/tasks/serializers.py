@@ -17,7 +17,6 @@ __all__ = [
     'TimeLogSerializer',
     'TimeLogCreateSerializer',
     'TimeLogUserDetailSerializer',
-    'TopMonthSerializer',
 ]
 
 
@@ -88,11 +87,3 @@ class TimeLogUserDetailSerializer(serializers.ModelSerializer):
             'started_at': {'read_only': True}
         }
 
-
-class TopMonthSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='tasks.id')
-    title = serializers.CharField(source='tasks.title')
-
-    class Meta:
-        model = Timelog
-        fields = ('id', 'title', 'duration')
