@@ -7,13 +7,13 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-User = settings.AUTH_USER_MODEL
-
 __all__ = [
     'Task',
     'Comment',
     'Timelog',
 ]
+
+User = settings.AUTH_USER_MODEL
 
 
 class Task(models.Model):
@@ -37,13 +37,7 @@ class Task(models.Model):
 
     @staticmethod
     def send_user_email(message: str, subject: str, recipient: Union[QuerySet, set, str]) -> None:
-        send_mail(
-            message=message,
-            subject=subject,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[recipient],
-            fail_silently=False
-        )
+        send_mail(message=message, subject=subject, from_email=settings.EMAIL_HOST_USER, recipient_list=[recipient], fail_silently=False)
 
 
 class Comment(models.Model):
@@ -66,14 +60,7 @@ def send_email_user(sender, instance, **kwargs) -> None:
     status = instance.status
     if change_data is not None:
         if 'status' in change_data and status is False:
-            user_email = Task.objects.filter(
-                pk=instance.id
-            ).select_related(
-                'assigned_to'
-            ).values_list(
-                'assigned_to__email',
-                flat=True
-            )
+            user_email = Task.objects.filter(pk=instance.id).select_related('assigned_to').values_list('assigned_to__email', flat=True)
             send_mail(
                 message=f'Admin changed you task status to Undone!',
                 subject=f'You have one undone Task. Id:{instance.id}',
@@ -100,32 +87,12 @@ class TimeLogQuerySet(QuerySet):
 class Timelog(models.Model):
     objects = TimeLogQuerySet.as_manager()
 
-    task = models.ForeignKey(
-        Task,
-        on_delete=models.CASCADE,
-        null=True,
-        related_name='time_logs'
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        null=True,
-        related_name='time_logs'
-    )
-    started_at = models.DateTimeField(
-        default=timezone.now,
-        blank=True
-    )
-    is_started = models.BooleanField(
-        default=False
-    )
-    is_stopped = models.BooleanField(
-        default=False
-    )
-    duration = models.IntegerField(
-        default=0,
-        blank=True
-    )
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='time_logs')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='time_logs')
+    started_at = models.DateTimeField(default=timezone.now, blank=True)
+    is_started = models.BooleanField(default=False)
+    is_stopped = models.BooleanField(default=False)
+    duration = models.IntegerField(default=0, blank=True)
 
     @staticmethod
     def get_total_duration_by_user(user_id: int) -> int:

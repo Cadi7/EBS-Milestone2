@@ -43,13 +43,7 @@ __all__ = [
 ]
 
 
-class TaskViewSet(
-    ListModelMixin,
-    RetrieveModelMixin,
-    CreateModelMixin,
-    DestroyModelMixin,
-    GenericViewSet
-):
+class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyModelMixin, GenericViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = (IsAuthenticated,)
@@ -66,12 +60,7 @@ class TaskViewSet(
             return TaskTimeLogSerializer
         return super(TaskViewSet, self).get_serializer_class()
 
-    @action(
-        methods=['get'],
-        url_path='my_task',
-        detail=False,
-        serializer_class=TaskListSerializer
-    )
+    @action(methods=['get'], url_path='my_task', detail=False, serializer_class=TaskListSerializer)
     def my_task(self, request, *args, **kwargs):
         queryset = self.queryset.filter(
             assigned=request.user.id
@@ -79,37 +68,17 @@ class TaskViewSet(
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(
-        methods=['get'],
-        url_path='completed_tasks',
-        detail=False,
-        serializer_class=TaskListSerializer
-    )
+    @action(methods=['get'], url_path='completed_tasks', detail=False, serializer_class=TaskListSerializer)
     def complete_task(self, request, *args, **kwargs):
-        queryset = self.queryset.filter(
-            status=True
-        )
-        serializer = self.get_serializer(
-            queryset,
-            many=True
-        )
+        queryset = self.queryset.filter(status=True)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(
-        methods=['patch'],
-        detail=True,
-        url_path='assign',
-        serializer_class=TaskAssignNewUserSerializer
-    )
+    @action(methods=['patch'], detail=True, url_path='assign', serializer_class=TaskAssignNewUserSerializer)
     def assign(self, request, *args, **kwargs):
         instance: Task = self.get_object()
-        serializer = self.get_serializer(
-            instance,
-            data=request.data
-        )
-        serializer.is_valid(
-            raise_exception=True
-        )
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
         serializer.save()
         user_email: str = instance.assigned.email
         print(user_email)
@@ -118,14 +87,9 @@ class TaskViewSet(
             message='Task assign to you, please check your task list',
             recipient=user_email
         )
-        return Response("Task assigned successfully and email was send.", status=status.HTTP_200_OK)
+        return Response({"detail ": "Task assigned successfully and email was send."}, status=status.HTTP_200_OK)
 
-    @action(
-        methods=['get'],
-        detail=True,
-        url_path='update',
-        serializer_class=TaskUpdateStatusSerializer
-    )
+    @action(methods=['get'], detail=True, url_path='update',serializer_class=TaskUpdateStatusSerializer)
     def update_status(self, request, *args, pk=None, **kwargs):
         task = Task.objects.get(id=pk)
         task.status = True
@@ -143,32 +107,21 @@ class TaskViewSet(
 
             serializer.save()
 
-            return Response("Task has been completed and email was send.", status=status.HTTP_200_OK)
+            return Response({"detail ": "Task has been completed and email was send."}, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class TaskCommentViewSet(
-    ListModelMixin,
-    CreateModelMixin,
-    GenericViewSet
-):
+class TaskCommentViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = [JWTAuthentication]
 
     def list(self, request, *args, **kwargs):
-        task_id: int = self.kwargs.get(
-            'task__pk'
-        )
-        queryset = self.queryset.filter(
-            task_id=task_id
-        )
-        serializer = self.get_serializer(
-            queryset,
-            many=True
-        )
+        task_id: int = self.kwargs.get('task__pk')
+        queryset = self.queryset.filter(task_id=task_id)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def perform_create(self, serializer):
@@ -176,7 +129,7 @@ class TaskCommentViewSet(
         task_title = Task.objects.get(id=task_id).title
         serializer.save(owner_id=self.request.user.id, task_id=task_id)
         self.send_task_created_email(task_id, task_title, recipient=self.request.user.email)
-        return Response("Comment has been posted! Email was send to owner", serializer.data)
+        return Response({"detail ": "Comment has been posted! Email was send to owner"}, serializer.data)
 
     @classmethod
     def send_task_created_email(cls, task_id, task_title, recipient):
@@ -191,11 +144,7 @@ class TimeLogSummarySerializer:
         self.total_time = total_time
 
 
-class TaskTimeLogViewSet(
-    ListModelMixin,
-    CreateModelMixin,
-    GenericViewSet
-):
+class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     queryset = Timelog.objects.all()
     serializer_class = TimeLogSerializer
     authentication_classes = [JWTAuthentication]
@@ -208,14 +157,8 @@ class TaskTimeLogViewSet(
 
     def list(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
-        queryset = self.get_queryset(
-        ).filter(
-            task_id=task_id
-        )
-        serializer = self.get_serializer(
-            queryset,
-            many=True
-        )
+        queryset = self.get_queryset().filter(task_id=task_id)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def perform_create(self, serializer):
@@ -227,11 +170,7 @@ class TaskTimeLogViewSet(
             is_stopped=True,
         )
 
-    @action(
-        methods=['post'],
-        url_path='start',
-        detail=False
-    )
+    @action(methods=['post'], url_path='start', detail=False)
     def start(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
         existing_unstopped_timelog: Timelog = self.queryset.filter(
@@ -253,11 +192,7 @@ class TaskTimeLogViewSet(
         else:
             raise NotFound('You have some unstopped tasks')
 
-    @action(
-        methods=['post'],
-        url_path='stop',
-        detail=False
-    )
+    @action(methods=['post'], url_path='stop', detail=False)
     def stop(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
         instance: Timelog = self.queryset.filter(
@@ -276,10 +211,7 @@ class TaskTimeLogViewSet(
         else:
             raise NotFound("You don't have started time logs")
 
-    @action(
-        methods=['get'],
-        url_path='summary',
-        detail=False)
+    @action(methods=['get'], url_path='summary', detail=False)
     def summary(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
         queryset = self.queryset.filter(
@@ -289,10 +221,7 @@ class TaskTimeLogViewSet(
         return Response(serializer.__dict__)
 
 
-class TimeLogViewSet(
-    ListModelMixin,
-    GenericViewSet
-):
+class TimeLogViewSet(ListModelMixin, GenericViewSet):
     queryset = Timelog.objects.all()
     serializer_class = TimeLogUserDetailSerializer
     authentication_classes = [JWTAuthentication]
@@ -300,11 +229,7 @@ class TimeLogViewSet(
     filter_backends = [filters.OrderingFilter]
     ordering = ['-duration']
 
-    @action(
-        methods=['get'],
-        detail=False,
-        url_path='time_logs_month'
-    )
+    @action(methods=['get'], detail=False, url_path='time_logs_month')
     def time_log_month(self, request, *args, **kwargs):
         queryset = self.queryset.filter(
             user=self.request.user,
