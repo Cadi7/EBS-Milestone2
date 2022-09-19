@@ -1,4 +1,3 @@
-
 from typing import Union
 from django.conf import settings
 from django.core.mail import send_mail
@@ -6,6 +5,7 @@ from django.db import models
 from django.db.models import QuerySet, Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
@@ -89,6 +89,13 @@ class TimeLogQuerySet(QuerySet):
             total_time=Sum('duration')
         )
 
+    def get_total_duration_each_user(self):
+        return self.values(
+            'task__id', 'task__title',
+        ).annotate(
+            total_time=Sum('duration')
+        )
+
 
 class Timelog(models.Model):
     objects = TimeLogQuerySet.as_manager()
@@ -106,7 +113,7 @@ class Timelog(models.Model):
         related_name='time_logs'
     )
     started_at = models.DateTimeField(
-        null=True,
+        default=timezone.now,
         blank=True
     )
     is_started = models.BooleanField(
@@ -115,18 +122,10 @@ class Timelog(models.Model):
     is_stopped = models.BooleanField(
         default=False
     )
-    duration = models.DurationField(
-        null=True,
+    duration = models.IntegerField(
+        default=0,
         blank=True
     )
-
-    @staticmethod
-    def get_total_duration(task_id: int) -> int:
-        return Timelog.objects.filter(
-            task_id=task_id
-        ).aggregate(
-            Sum('duration')
-        )['duration__sum'] or 0
 
     @staticmethod
     def get_total_duration_by_user(user_id: int) -> int:
@@ -162,4 +161,3 @@ class Timelog(models.Model):
 
     def __str__(self):
         return f'{self.id}'
-

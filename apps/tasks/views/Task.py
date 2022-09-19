@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import filters, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -26,7 +28,7 @@ from apps.tasks.serializers import (
     TaskAssignNewUserSerializer,
     TaskUpdateStatusSerializer,
     CommentSerializer, TimeLogSerializer, TimeLogCreateSerializer,
-    TimeLogUserDetailSerializer,
+    TimeLogUserDetailSerializer, TopTasksSerializer, TaskTimeLogSerializer,
 )
 from config import settings
 from config.settings import EMAIL_HOST_USER
@@ -61,7 +63,7 @@ class TaskViewSet(
 
     def get_serializer_class(self):
         if self.action == 'list':
-            return TaskListSerializer
+            return TaskTimeLogSerializer
         return super(TaskViewSet, self).get_serializer_class()
 
     @action(
@@ -116,7 +118,7 @@ class TaskViewSet(
             message='Task assign to you, please check your task list',
             recipient=user_email
         )
-        return Response(status=status.HTTP_200_OK)
+        return Response("Task assigned successfully and email was send.", status=status.HTTP_200_OK)
 
     @action(
         methods=['get'],
@@ -141,10 +143,9 @@ class TaskViewSet(
 
             serializer.save()
 
-            return Response("Task completed", status=status.HTTP_200_OK)
+            return Response("Task has been completed and email was send.", status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TaskCommentViewSet(
@@ -175,6 +176,7 @@ class TaskCommentViewSet(
         task_title = Task.objects.get(id=task_id).title
         serializer.save(owner_id=self.request.user.id, task_id=task_id)
         self.send_task_created_email(task_id, task_title, recipient=self.request.user.email)
+        return Response("Comment has been posted! Email was send to owner", serializer.data)
 
     @classmethod
     def send_task_created_email(cls, task_id, task_title, recipient):
@@ -218,7 +220,6 @@ class TaskTimeLogViewSet(
 
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_pk')
-        print(task_id)
         serializer.save(
             task_id=task_id,
             user=self.request.user,
@@ -313,17 +314,11 @@ class TimeLogViewSet(
             queryset.with_total_time()
         )
 
-    @action(
-        methods=['get'],
-        detail=False,
-        url_path='top20',
-        serializer_class=TimeLogSerializer
-    )
-    def top20(self, request, *args, **kwargs):
-        queryset = self.queryset.filter(
-            user=self.request.user,
-            started_at__month=timezone.now().strftime('%m'),
-        ).order_by('-duration')[:20]
+    @method_decorator(cache_page(60))
+    @action(methods=['get'], detail=False, serializer_class=TopTasksSerializer, url_path='top20')
+    def top_20(self, request, *args, **kwargs):
+        last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
+        queryset = self.queryset.filter(started_at__gt=last_month).annotate(sum=Sum('duration'))
+        queryset = queryset.order_by('sum')[:20]
         return Response(
-            queryset
-        )
+            queryset.get_total_duration_each_user())

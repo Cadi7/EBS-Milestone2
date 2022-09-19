@@ -14,7 +14,6 @@ from datetime import timedelta
 from pathlib import Path
 import environ
 
-
 env = environ.Env()
 environ.Env.read_env()
 
@@ -31,9 +30,8 @@ SECRET_KEY = '6mfu__uq3m%0kwsw15oum99*xmyoyzi_qg97i+7n87p4sbc36k'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 # Application definition
-
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'apps.settings')
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -77,7 +75,7 @@ SIMPLE_JWT = {
 
 JWT_AUTH = {
     'JWT_RESPONSE_PAYLOAD_HANDLER':
-    'new_sns.utils.custom_jwt_response_handler',
+        'new_sns.utils.custom_jwt_response_handler',
 }
 
 MIDDLEWARE = [
@@ -184,11 +182,10 @@ SWAGGER_SETTINGS = {
     "USE_SESSION_AUTH": False,
 }
 
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER='finicacr7@gmail.com'
-EMAIL_HOST_PASSWORD='ebehjdtboarofhcq'
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 APPEND_SLASH = False

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Sum
 from rest_framework import serializers
 
 from apps.tasks.models import (
@@ -17,6 +18,8 @@ __all__ = [
     'TimeLogSerializer',
     'TimeLogCreateSerializer',
     'TimeLogUserDetailSerializer',
+    'TopTasksSerializer',
+    'TaskTimeLogSerializer',
 ]
 
 
@@ -87,3 +90,30 @@ class TimeLogUserDetailSerializer(serializers.ModelSerializer):
             'started_at': {'read_only': True}
         }
 
+
+class TopTasksSerializer(serializers.ModelSerializer):
+    total_time = serializers.DurationField(read_only=True)
+
+    class Meta:
+        model = Task
+        fields = ('id', 'title', 'total_time')
+        extra_kwargs = {'total_time': {'read_only': True}}
+
+
+class TaskTimeLogSerializer(serializers.ModelSerializer):
+    time_logs = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_time_logs(task_id: int) -> int:
+        return Timelog.objects.filter(
+            task_id=task_id
+        ).aggregate(
+            Sum('duration')
+        )['duration__sum'] or 0
+
+    class Meta:
+        model = Task
+        fields = ('id', 'title', 'time_logs')
+        extra_kwargs = {
+            'time_logs': {'read_only': True}
+        }
