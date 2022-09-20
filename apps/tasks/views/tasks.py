@@ -89,7 +89,7 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
         )
         return Response({"detail ": "Task assigned successfully and email was send."}, status=status.HTTP_200_OK)
 
-    @action(methods=['get'], detail=True, url_path='update',serializer_class=TaskUpdateStatusSerializer)
+    @action(methods=['get'], detail=True, url_path='update', serializer_class=TaskUpdateStatusSerializer)
     def update_status(self, request, *args, pk=None, **kwargs):
         task = Task.objects.get(id=pk)
         task.status = True

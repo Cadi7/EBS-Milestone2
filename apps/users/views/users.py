@@ -11,9 +11,7 @@ from apps.users.models import User
 from apps.users.serializers import ShortUserSerializer
 
 
-class RegisterView(
-    mixins.ListModelMixin,
-    GenericViewSet):
+class RegisterView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = ShortUserSerializer
     queryset = User.objects.all()
     authentication_classes = [JWTAuthentication]

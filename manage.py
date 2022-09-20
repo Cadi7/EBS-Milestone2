@@ -31,6 +31,8 @@ class Command(createsuperuser.Command):
             user = self.UserModel._default_manager.db_manager(database).get()
             user.set_password(password)
             user.save()
+
+
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')

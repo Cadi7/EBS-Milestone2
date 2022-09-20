@@ -13,7 +13,7 @@ __all__ = [
     'Timelog',
 ]
 
-User = settings.AUTH_USER_MODEL
+from apps.users.models import User
 
 
 class Task(models.Model):
@@ -37,7 +37,8 @@ class Task(models.Model):
 
     @staticmethod
     def send_user_email(message: str, subject: str, recipient: Union[QuerySet, set, str]) -> None:
-        send_mail(message=message, subject=subject, from_email=settings.EMAIL_HOST_USER, recipient_list=[recipient], fail_silently=False)
+        send_mail(message=message, subject=subject, from_email=settings.EMAIL_HOST_USER, recipient_list=[recipient],
+                  fail_silently=False)
 
 
 class Comment(models.Model):
@@ -60,7 +61,8 @@ def send_email_user(sender, instance, **kwargs) -> None:
     status = instance.status
     if change_data is not None:
         if 'status' in change_data and status is False:
-            user_email = Task.objects.filter(pk=instance.id).select_related('assigned_to').values_list('assigned_to__email', flat=True)
+            user_email = Task.objects.filter(pk=instance.id).select_related('assigned_to').values_list(
+                'assigned_to__email', flat=True)
             send_mail(
                 message=f'Admin changed you task status to Undone!',
                 subject=f'You have one undone Task. Id:{instance.id}',
