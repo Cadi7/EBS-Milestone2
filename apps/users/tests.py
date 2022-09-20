@@ -1,10 +1,26 @@
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIRequestFactory
 from django.contrib.auth import get_user_model
-
+from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
+from rest_framework.test import force_authenticate
 
-User = get_user_model()
+
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
+
+
+def force_authenticate_request(request, user):
+    factory = APIRequestFactory()
+    user = User.objects.get(email='finicacr7@gmail.com', password='1234')
+
+    # Make an authenticated request to the view...
+    request = factory.get('/users/register')
+    force_authenticate(request, user=user, token=user.auth_token)
 
 
 def auth(user):
@@ -14,69 +30,54 @@ def auth(user):
     }
 
 
-class UserTestCase(APITestCase):
-    # fixtures = ['user_fixtures.json']
+def setUp(self):
+    self.email = 'finicacr7@gmail.com'
+    self.password = '1234'
+    self.simple_user = User.objects.create_user(self.email, self.email, self.password)
+    self.simple_user.save()
 
-    def setUp(self):
-        self.simple_user = User.objects.get(email='finicacr7@gmail.com' )
-        self.simple_user_refresh = RefreshToken.for_user(self.simple_user)
+    class AccountTests(APITestCase):
+        def test_user_register(self):
+            data = {
+                "first_name": "string",
+                "last_name": "string",
+                "username": "string",
+                "email": "faer.faer.2006@mail.ru",
+                "password": "string"
+            }
 
-    def test_simple_user_access_token(self):
-        # Simple user get access token
-        data = {
-            'email': self.simple_user.email,
-            'password': 'string'
-        }
-        response = self.client.post(
-            path='/users/login/',
-            data=data,
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+            response = self.client.post('/users/register/', data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_simple_user_refresh_token(self):
-        # Simple user get refresh token
-        data = {
-            'refresh': str(self.simple_user_refresh)
-        }
-        response = self.client.post(
-            path='/users/refresh/',
-            data=data,
-            **auth(self.simple_user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        def test_create_access_token(self):
+            """Create a user"""
 
-    def test_simple_user_users_list(self):
-        # Simple user get list of users
-        response = self.client.get(
-            path='/users/',
-            **auth(self.simple_user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+            username = "finicacr7@gmail.com"
+            password = "1234"
+            self.user = User.objects.create_user(username, username, password)
+            jwt_fetch_data = {
+                'username': username,
+                'password': password
+            }
 
-    def test_unauthorized_user_register_used_user_data(self):
-        # Unauthorized user register new account with already used user data
-        data = {
-            'first_name': self.simple_user.first_name,
-            'last_name': self.simple_user.last_name,
-            'email': self.simple_user.email,
-            'password': 'string'
-        }
-        response = self.client.post(
-            path='/users/register/',
-            data=data
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            response = self.client.post('/users/login/', jwt_fetch_data, 'json')
 
-    def test_unauthorized_user_register_new_user_data(self):
-        # Unauthorized user register new account with new user data
-        data = {
-            'first_name': 'test_first_name',
-            'last_name': 'test_last_name',
-            'email': 'test@gmail.com',
-            'password': '000000'
-        }
-        response = self.client.post(
-            path='/users/register/',
-            data=data
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+            """Test access token"""
+
+            token = get_tokens_for_user(self.user).get('access')
+            self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+            """Test refresh token"""
+
+            self.refresh_token = response.data['refresh']
+
+            data = {
+                'refresh': self.refresh_token
+            }
+            response = self.client.post('/user/refresh/', data, 'json')
+            access_token = get_tokens_for_user(self.user).get('access')
+            self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+
+        def test_get_all_users(self):
+            response = self.client.get('/users/', data={'format': 'json'})
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
