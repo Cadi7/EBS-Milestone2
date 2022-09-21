@@ -1,0 +1,52 @@
+[
+   {
+      "model":"tasks.task",
+      "pk":1,
+      "fields":{
+         "title":"noroc si buna ziua",
+         "description":"chiar este buna",
+         "status":true,
+         "assigned":2
+      }
+   },
+   {
+      "model":"tasks.task",
+      "pk":2,
+      "fields":{
+         "title":"de data asta e seara",
+         "description":"sunt foarte fericit",
+         "status":false,
+         "assigned":1
+      }
+   },
+   {
+      "model":"tasks.task",
+      "pk":3,
+      "fields":{
+         "title":"primul meu task",
+         "description":"macar am reusit",
+         "status":true,
+         "assigned":2
+      }
+   },
+   {
+      "model":"tasks.task",
+      "pk":4,
+      "fields":{
+         "title":"al 2-lea task",
+         "description":"sunt convins",
+         "status":true,
+         "assigned":2
+      }
+   },
+   {
+      "model":"tasks.task",
+      "pk":5,
+      "fields":{
+         "title":"ai de facut estimarile",
+         "description":"treb sa fie cat mai reale",
+         "status":false,
+         "assigned":3
+      }
+   }
+]

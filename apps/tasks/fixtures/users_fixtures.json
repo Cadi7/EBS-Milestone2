@@ -1,0 +1,56 @@
+[
+   {
+      "model":"users.user",
+      "pk":1,
+      "fields":{
+         "password":"pbkdf2_sha256$216000$iHO0bJzM0Ven$2haih44uwialMVcl2ozSJQJZGE8/aIHEhhKI7eNjkJA=",
+         "last_login":null,
+         "is_superuser":false,
+         "first_name":"Renata",
+         "last_name":"Finica",
+         "email":"celac.renata@gmail.com",
+         "groups":[
+
+         ],
+         "user_permissions":[
+
+         ]
+      }
+   },
+   {
+      "model":"users.user",
+      "pk":2,
+      "fields":{
+         "password":"pbkdf2_sha256$216000$Tc2PuivFdlqO$UsQCan44hRf4zB66ZF/1lxKesJA0xqP35VsxE+H5whA=",
+         "last_login":null,
+         "is_superuser":false,
+         "first_name":"Cristian",
+         "last_name":"Finica",
+         "email":"finicacr7@gmail.com",
+         "groups":[
+
+         ],
+         "user_permissions":[
+
+         ]
+      }
+   },
+   {
+      "model":"users.user",
+      "pk":3,
+      "fields":{
+         "password":"pbkdf2_sha256$216000$7IyPGqhKaX4e$v4OSm2TTABBEWj/WcbXE5fu8Exmm7nSOHAWvdUYiv8w=",
+         "last_login":null,
+         "is_superuser":false,
+         "first_name":"Patratica",
+         "last_name":"Ionel",
+         "email":"cristianfnc7@gmail.com",
+         "groups":[
+
+         ],
+         "user_permissions":[
+
+         ]
+      }
+   }
+]

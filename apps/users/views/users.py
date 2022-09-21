@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users import serializers
 from apps.users.models import User
-from apps.users.serializers import ShortUserSerializer
+from apps.users.serializers import ShortUserSerializer, UserSerializer
 
 
 class RegisterView(mixins.ListModelMixin, GenericViewSet):
@@ -16,16 +16,7 @@ class RegisterView(mixins.ListModelMixin, GenericViewSet):
     queryset = User.objects.all()
     authentication_classes = [JWTAuthentication]
 
-    def get_serializer_class(self):
-        if self.action == 'register':
-            return serializers.UserSerializer
-        elif self.action == 'login':
-            return serializers.LoginSerializer
-        elif self.action == 'list':
-            return serializers.ShortUserSerializer
-        return serializers.UserSerializer
-
-    @action(methods=['post'], detail=False, url_path='register', permission_classes=[AllowAny])
+    @action(methods=['post'], detail=False, url_path='register', permission_classes=[AllowAny], serializer_class=UserSerializer)
     def register(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -47,13 +38,3 @@ class RegisterView(mixins.ListModelMixin, GenericViewSet):
             'refresh': str(refresh),
             'access': str(refresh.access_token)
         })
-
-    def logout(self, request):
-        response = Response()
-
-        response.delete_cookie('token')
-        response.data = {
-            'message': 'success'
-        }
-
-        return response

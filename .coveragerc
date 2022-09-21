@@ -1,0 +1,2 @@
+[run]
+omit = *tests*, **__init__**, *C:\Users\CristiaN\PycharmProjects\EBS-Milestone2\config*, *C:\Users\CristiaN\PycharmProjects\EBS-Milestone2\apps\common*, *C:\Users\CristiaN\PycharmProjects\EBS-Milestone2\apps\tasks\migrations*, *C:\Users\CristiaN\PycharmProjects\EBS-Milestone2\apps\users\migrations*

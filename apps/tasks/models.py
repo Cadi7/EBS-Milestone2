@@ -32,9 +32,6 @@ class Task(models.Model):
         verbose_name_plural = 'Tasks'
         ordering = ['id']
 
-    def __str__(self):
-        return self.title
-
     @staticmethod
     def send_user_email(message: str, subject: str, recipient: Union[QuerySet, set, str]) -> None:
         send_mail(message=message, subject=subject, from_email=settings.EMAIL_HOST_USER, recipient_list=[recipient],
@@ -50,9 +47,6 @@ class Comment(models.Model):
         verbose_name = 'Comment'
         verbose_name_plural = 'Comments'
         ordering = ['id']
-
-    def __str__(self):
-        return f'{self.id}'
 
 
 @receiver(post_save, sender=Task, dispatch_uid='send_email_user')
@@ -127,6 +121,3 @@ class Timelog(models.Model):
         verbose_name = 'Time Log'
         verbose_name_plural = 'Time Logs'
         ordering = ['id']
-
-    def __str__(self):
-        return f'{self.id}'

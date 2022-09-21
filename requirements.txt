@@ -3,3 +3,8 @@ djangorestframework~=3.13.1
 djangorestframework-simplejwt==4.8.0
 django-filter==2.4.0
 django-environ==0.4.5
+drf_yasg==1.20.0
+drf_util==1.0.17
+psycopg2==2.8.6
+django_nose==1.4.7
+drf-nested-routers==0.93.4

@@ -58,6 +58,8 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
     def get_serializer_class(self):
         if self.action == 'list':
             return TaskTimeLogSerializer
+        if self.action == 'assign':
+            return TaskAssignNewUserSerializer
         return TaskSerializer
 
     @action(methods=['get'], url_path='my_task', detail=False, serializer_class=TaskListSerializer)
@@ -69,7 +71,7 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['get'], url_path='completed_tasks', detail=False, serializer_class=TaskListSerializer)
-    def complete_task(self, request, *args, **kwargs):
+    def completed_tasks(self, request, *args, **kwargs):
         queryset = self.queryset.filter(status=True)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -106,10 +108,7 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
                       EMAIL_HOST_USER, emails)
 
             serializer.save()
-
             return Response({"detail ": "Task has been completed and email was send."}, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TaskCommentViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
@@ -129,19 +128,13 @@ class TaskCommentViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         task_title = Task.objects.get(id=task_id).title
         serializer.save(owner_id=self.request.user.id, task_id=task_id)
         self.send_task_created_email(task_id, task_title, recipient=self.request.user.email)
-        return Response({"detail ": "Comment has been posted! Email was send to owner"}, serializer.data)
+        return Response({"detail ": "Comment has been posted! Email was send to owner"}, status=status.HTTP_200_OK)
 
     @classmethod
     def send_task_created_email(cls, task_id, task_title, recipient):
         send_mail('Your task is commented',
                   f'Your task with id {task_id} and title' + task_title + 'is commented',
                   settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
-
-
-class TimeLogSummarySerializer:
-    def __init__(self, user_id, total_time):
-        self.user_id = user_id
-        self.total_time = total_time
 
 
 class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
@@ -153,7 +146,7 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return TimeLogCreateSerializer
-        return TimeLogSerializer
+        return super().get_serializer_class()
 
     def list(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
@@ -176,7 +169,7 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         existing_unstopped_timelog: Timelog = self.queryset.filter(
             task_id=task_id,
             user=self.request.user,
-            duration=None,
+            duration=0,
             is_started=True,
             is_stopped=False,
         ).last()
@@ -199,26 +192,23 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             task_id=task_id,
             is_started=True,
             is_stopped=False,
-            duration=None,
+            duration=0,
             user=self.request.user
         ).first()
         if instance:
-            instance.duration = timezone.now() - instance.started_at
+            instance.duration = duration = int((timezone.now() - instance.started_at).total_seconds() / 60)
             instance.is_stopped = True
             instance.is_started = False
             instance.save()
-            return Response({"Detail: ": "Timelog has been stopped"}, status=status.HTTP_200_OK)
+            return Response({"Detail: ": "Timelog has been stopped", f"Duration": {duration}}, status=status.HTTP_200_OK)
         else:
             raise NotFound("You don't have started time logs")
 
     @action(methods=['get'], url_path='summary', detail=False)
     def summary(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
-        queryset = self.queryset.filter(
-            task_id=task_id
-        )
-        serializer = TimeLogSummarySerializer(queryset.first().user.id, queryset.aggregate(Sum('duration')))
-        return Response(serializer.__dict__)
+        queryset = self.queryset.filter(task_id=task_id).aggregate(sum=Sum('duration'))
+        return Response({"Total time: ": queryset['sum']}, status=status.HTTP_200_OK)
 
 
 class TimeLogViewSet(ListModelMixin, GenericViewSet):

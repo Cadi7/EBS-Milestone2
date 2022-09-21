@@ -28,6 +28,7 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = '__all__'
         extra_kwargs = {
+            'status': {'read_only': True},
             'assigned': {'read_only': True},
         }
 
