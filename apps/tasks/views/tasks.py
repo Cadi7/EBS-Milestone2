@@ -80,16 +80,15 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
     def assign(self, request, *args, **kwargs):
         instance: Task = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        user_email: str = instance.assigned.email
-        print(user_email)
-        instance.send_user_email(
-            subject=f'Task with id:{instance.id} and title: {instance.title} is assigned to you',
-            message='Task assign to you, please check your task list',
-            recipient=user_email
-        )
-        return Response({"detail ": "Task assigned successfully and email was send."}, status=status.HTTP_200_OK)
+        if serializer.is_valid():
+            user_email: str = instance.assigned.email
+            instance.send_user_email(
+                subject=f'Task with id:{instance.id} and title: {instance.title} is assigned to you',
+                message='Task assign to you, please check your task list',
+                recipient=user_email
+            )
+            serializer.save()
+            return Response({"detail ": "Task assigned successfully and email was send."}, status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=True, url_path='update', serializer_class=TaskUpdateStatusSerializer)
     def update_status(self, request, *args, pk=None, **kwargs):
@@ -200,7 +199,8 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             instance.is_stopped = True
             instance.is_started = False
             instance.save()
-            return Response({"Detail: ": "Timelog has been stopped", f"Duration": {duration}}, status=status.HTTP_200_OK)
+            return Response({"Detail: ": "Timelog has been stopped", f"Duration": {duration}},
+                            status=status.HTTP_200_OK)
         else:
             raise NotFound("You don't have started time logs")
 
