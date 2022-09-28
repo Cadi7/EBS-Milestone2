@@ -30,7 +30,6 @@ class Task(models.Model):
     class Meta:
         verbose_name = 'Task'
         verbose_name_plural = 'Tasks'
-        ordering = ['id']
 
     @staticmethod
     def send_user_email(message: str, subject: str, recipient: Union[QuerySet, set, str]) -> None:
@@ -46,7 +45,6 @@ class Comment(models.Model):
     class Meta:
         verbose_name = 'Comment'
         verbose_name_plural = 'Comments'
-        ordering = ['id']
 
 
 @receiver(post_save, sender=Task, dispatch_uid='send_email_user')
@@ -83,8 +81,8 @@ class TimeLogQuerySet(QuerySet):
 class Timelog(models.Model):
     objects = TimeLogQuerySet.as_manager()
 
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='time_logs')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='time_logs')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='task_logs')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='user_logs')
     started_at = models.DateTimeField(default=timezone.now, blank=True)
     is_started = models.BooleanField(default=False)
     is_stopped = models.BooleanField(default=False)
@@ -120,4 +118,3 @@ class Timelog(models.Model):
     class Meta:
         verbose_name = 'Time Log'
         verbose_name_plural = 'Time Logs'
-        ordering = ['id']

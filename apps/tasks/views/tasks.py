@@ -6,7 +6,6 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import filters, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
 from rest_framework.mixins import (
     ListModelMixin,
     RetrieveModelMixin,
@@ -44,7 +43,7 @@ __all__ = [
 
 
 class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyModelMixin, GenericViewSet):
-    queryset = Task.objects.all()
+    queryset = Task.objects.annotate(time_logs=Sum('task_logs__duration'))
     serializer_class = TaskSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = [JWTAuthentication]
@@ -53,7 +52,11 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
     search_fields = ['title']
 
     def perform_create(self, serializer):
-        serializer.save(assigned_id=self.request.user.id)
+        if serializer.is_valid():
+            serializer.save(assigned_id=self.request.user.id)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -62,7 +65,7 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
             return TaskAssignNewUserSerializer
         return TaskSerializer
 
-    @action(methods=['get'], url_path='my_task', detail=False, serializer_class=TaskListSerializer)
+    @action(methods=['get'], url_path='my_tasks', detail=False, serializer_class=TaskListSerializer)
     def my_task(self, request, *args, **kwargs):
         queryset = self.queryset.filter(
             assigned=request.user.id
@@ -89,6 +92,8 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
             )
             serializer.save()
             return Response({"detail ": "Task assigned successfully and email was send."}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=True, url_path='update', serializer_class=TaskUpdateStatusSerializer)
     def update_status(self, request, *args, pk=None, **kwargs):
@@ -105,9 +110,11 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
                     emails.append(com.owner.email)
             send_mail("Task Completed", "The task where you added a comment is completed - " + task.title,
                       EMAIL_HOST_USER, emails)
-
             serializer.save()
             return Response({"detail ": "Task has been completed and email was send."}, status=status.HTTP_200_OK)
+
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TaskCommentViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
@@ -125,9 +132,12 @@ class TaskCommentViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_pk')
         task_title = Task.objects.get(id=task_id).title
-        serializer.save(owner_id=self.request.user.id, task_id=task_id)
-        self.send_task_created_email(task_id, task_title, recipient=self.request.user.email)
-        return Response({"detail ": "Comment has been posted! Email was send to owner"}, status=status.HTTP_200_OK)
+        if serializer.is_valid():
+            serializer.save(owner_id=self.request.user.id, task_id=task_id)
+            self.send_task_created_email(task_id, task_title, recipient=self.request.user.email)
+            return Response({"detail ": "Comment has been posted! Email was send to owner"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @classmethod
     def send_task_created_email(cls, task_id, task_title, recipient):
@@ -151,16 +161,18 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         task_id = self.kwargs.get('task_pk')
         queryset = self.get_queryset().filter(task_id=task_id)
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if serializer.is_valid:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_pk')
-        serializer.save(
-            task_id=task_id,
-            user=self.request.user,
-            is_started=True,
-            is_stopped=True,
-        )
+        if serializer.is_valid():
+            serializer.save(task_id=task_id, user=self.request.user, is_started=True, is_stopped=True)
+            return Response({"detail ": "Time log has been added"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], url_path='start', detail=False)
     def start(self, request, *args, **kwargs):
@@ -182,7 +194,7 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             )
             return Response({"Detail: ": "Timelog has been started"}, status=status.HTTP_201_CREATED)
         else:
-            raise NotFound('You have some unstopped tasks')
+            return Response({"Detail: ": "Timelog has been already started"}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], url_path='stop', detail=False)
     def stop(self, request, *args, **kwargs):
@@ -202,13 +214,17 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             return Response({"Detail: ": "Timelog has been stopped", f"Duration": {duration}},
                             status=status.HTTP_200_OK)
         else:
-            raise NotFound("You don't have started time logs")
+            return Response({"Detail: ": "Timelog has been already stopped"}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], url_path='summary', detail=False)
     def summary(self, request, *args, **kwargs):
         task_id = self.kwargs.get('task_pk')
         queryset = self.queryset.filter(task_id=task_id).aggregate(sum=Sum('duration'))
-        return Response({"Total time: ": queryset['sum']}, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(queryset, many=False)
+        if serializer.is_valid:
+            return Response({"Total time: ": queryset['sum']}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TimeLogViewSet(ListModelMixin, GenericViewSet):
@@ -225,7 +241,11 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
             user=self.request.user,
             started_at__month=timezone.now().month,
         )
-        return Response(queryset.with_total_time())
+        serializer = self.get_serializer(queryset, many=True)
+        if serializer.is_valid:
+            return Response(queryset.with_total_time())
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @method_decorator(cache_page(60))
     @action(methods=['get'], detail=False, serializer_class=TopTasksSerializer, url_path='top20')
@@ -233,4 +253,8 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
         last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
         queryset = self.queryset.filter(started_at__gt=last_month).annotate(sum=Sum('duration'))
         queryset = queryset.order_by('sum')[:20]
-        return Response(queryset.get_total_duration_each_user())
+        serializer = self.get_serializer(queryset, many=True)
+        if serializer.is_valid:
+            return Response(queryset.get_total_duration_each_user())
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

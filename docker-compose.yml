@@ -38,8 +38,18 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=db
+      - DJANGO_SETTINGS_MODULE=config.settings
     depends_on:
       - db
     env_file:
       - .env
     container_name: web
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    command: redis-server --appendonly yes

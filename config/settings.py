@@ -13,23 +13,26 @@ import os
 from datetime import timedelta
 from pathlib import Path
 import environ
-
 env = environ.Env()
-environ.Env.read_env()
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'apps.settings')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
+
+environ.Env.read_env(f"{BASE_DIR}/.env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+DEBUG_LEVEL = "DEBUG"
 ALLOWED_HOSTS = []
 AUTH_USER_MODEL = "users.User"
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 # Application definition
 
 INSTALLED_APPS = [
@@ -39,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'drf_yasg',
     'drf_util',
     'rest_framework',
@@ -92,6 +94,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'drf_util.middlewares.PrintSQlMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -112,6 +115,15 @@ TEMPLATES = [
     },
 ]
 
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database

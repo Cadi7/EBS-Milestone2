@@ -102,15 +102,7 @@ class TopTasksSerializer(serializers.ModelSerializer):
 
 
 class TaskTimeLogSerializer(serializers.ModelSerializer):
-    time_logs = serializers.SerializerMethodField()
-
-    @staticmethod
-    def get_time_logs(task_id: int) -> int:
-        return Timelog.objects.filter(
-            task_id=task_id
-        ).aggregate(
-            Sum('duration')
-        )['duration__sum'] or 0
+    time_logs = serializers.IntegerField()
 
     class Meta:
         model = Task

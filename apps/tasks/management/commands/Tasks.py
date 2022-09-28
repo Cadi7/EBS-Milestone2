@@ -19,11 +19,12 @@ class Command(BaseCommand):
 
         data = []
         start = datetime.now()
+        user = User.objects.first()
         for _ in range(25000):
             random_title = (''.join(random.choice(random_letters) for _ in range(20)))
             random_description = (''.join(random.choice(random_letters) for _ in range(60)))
             data.append(
-                Task(title=random_title, description=random_description, status=False, assigned=User.objects.first()))
+                Task(title=random_title, description=random_description, status=False, assigned=user))
         Task.objects.bulk_create(data)
         end = datetime.now() - start
         self._log_creating_notice(end)

@@ -53,7 +53,7 @@ class TasksTests(APITestCase):
 
     def test_my_task(self):
         self.test_access_token()
-        response = self.client.get('/tasks/my_task/', data={'format': 'json'})
+        response = self.client.get('/tasks/my_tasks/', data={'format': 'json'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_completed_tasks(self):
