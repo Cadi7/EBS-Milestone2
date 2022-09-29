@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
@@ -63,6 +64,8 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
             return TaskTimeLogSerializer
         if self.action == 'assign':
             return TaskAssignNewUserSerializer
+        if self.action == 'create':
+            return TaskSerializer
         return TaskSerializer
 
     @action(methods=['get'], url_path='my_tasks', detail=False, serializer_class=TaskListSerializer)
@@ -96,25 +99,26 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=True, url_path='update', serializer_class=TaskUpdateStatusSerializer)
-    def update_status(self, request, *args, pk=None, **kwargs):
-        task = Task.objects.get(id=pk)
-        task.status = True
-        serializer = TaskUpdateStatusSerializer(task, data={"id": task.id, "status": True})
-
-        if serializer.is_valid():
-            queryset = Comment.objects.all().filter(task_id=pk)
-
-            emails = []
-            for com in queryset:
-                if com.owner.email not in emails:
-                    emails.append(com.owner.email)
-            send_mail("Task Completed", "The task where you added a comment is completed - " + task.title,
-                      EMAIL_HOST_USER, emails)
-            serializer.save()
-            return Response({"detail ": "Task has been completed and email was send."}, status=status.HTTP_200_OK)
-
+    def update_status(self, request, pk):
+        try:
+            task = Task.objects.get(id=pk)
+        except ObjectDoesNotExist:
+            return Response({'detail': "This task doesn't exist"},  status=status.HTTP_404_NOT_FOUND)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            task.status = True
+            serializer = TaskUpdateStatusSerializer(task, data={"id": task.id, "status": True})
+
+            if serializer.is_valid():
+                queryset = Comment.objects.all().filter(task_id=pk)
+
+                emails = []
+                for com in queryset:
+                    if com.owner.email not in emails:
+                        emails.append(com.owner.email)
+                send_mail("Task Completed", "The task where you added a comment is completed - " + task.title,
+                          EMAIL_HOST_USER, emails)
+                serializer.save()
+                return Response({"detail ": "Task has been completed and email was send."}, status=status.HTTP_200_OK)
 
 
 class TaskCommentViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
@@ -161,10 +165,7 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         task_id = self.kwargs.get('task_pk')
         queryset = self.get_queryset().filter(task_id=task_id)
         serializer = self.get_serializer(queryset, many=True)
-        if serializer.is_valid:
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_pk')
@@ -221,10 +222,7 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         task_id = self.kwargs.get('task_pk')
         queryset = self.queryset.filter(task_id=task_id).aggregate(sum=Sum('duration'))
         serializer = self.get_serializer(queryset, many=False)
-        if serializer.is_valid:
-            return Response({"Total time: ": queryset['sum']}, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TimeLogViewSet(ListModelMixin, GenericViewSet):
@@ -240,21 +238,13 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
         queryset = self.queryset.filter(
             user=self.request.user,
             started_at__month=timezone.now().month,
-        )
-        serializer = self.get_serializer(queryset, many=True)
-        if serializer.is_valid:
-            return Response(queryset.with_total_time())
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        ).annotate(total_time=Sum('duration')).order_by('-total_time')
+        return Response(queryset, status=status.HTTP_200_OK)
 
-    @method_decorator(cache_page(60))
+    @method_decorator(cache_page(10))
     @action(methods=['get'], detail=False, serializer_class=TopTasksSerializer, url_path='top20')
     def top_20(self, request, *args, **kwargs):
         last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
-        queryset = self.queryset.filter(started_at__gt=last_month).annotate(sum=Sum('duration'))
-        queryset = queryset.order_by('sum')[:20]
-        serializer = self.get_serializer(queryset, many=True)
-        if serializer.is_valid:
-            return Response(queryset.get_total_duration_each_user())
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        queryset = self.queryset.filter(started_at__gt=last_month).annotate(sum=Sum('duration')).order_by('-sum')[:20]
+        return Response(queryset.get_total_duration_each_user(), status=status.HTTP_200_OK)
+

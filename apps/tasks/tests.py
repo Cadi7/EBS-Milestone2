@@ -3,7 +3,8 @@ import coverage
 
 import time
 
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, \
+    HTTP_404_NOT_FOUND
 from rest_framework.test import APITestCase
 
 from apps.tasks.models import Task, Comment, Timelog
@@ -43,23 +44,30 @@ class TasksTests(APITestCase):
             "description": "string",
             "status": False,
         }
+
         response = self.client.post('/tasks/', data, 'json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTP_201_CREATED)
+
+    def test_create_bad_task(self):
+        self.test_access_token()
+
+        response = self.client.post('/tasks/', "", 'json')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
 
     def test_get_all_tasks(self):
         self.test_access_token()
         response = self.client.get('/tasks/', data={'format': 'json'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_my_task(self):
         self.test_access_token()
         response = self.client.get('/tasks/my_tasks/', data={'format': 'json'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_completed_tasks(self):
         self.test_access_token()
         response = self.client.get('/tasks/completed_tasks/', data={'format': 'json'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_detail_task(self):
         self.test_access_token()
@@ -96,6 +104,12 @@ class TasksTests(APITestCase):
         response = self.client.patch('/tasks/1/assign/', data, 'json')
         self.assertEqual(response.status_code, HTTP_200_OK)
 
+        data = {
+            'assigned': -1
+        }
+        response = self.client.patch('/tasks/1/assign/', data, 'json')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
+
     def test_complete_task(self):
         self.test_access_token()
 
@@ -115,6 +129,8 @@ class TasksTests(APITestCase):
         self.assertEqual(response.status_code, HTTP_200_OK)
         task = Task.objects.get(id=1)
         self.assertEqual(task.status, True)
+        response = self.client.get('/tasks/123456/update/')
+        self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
     def test_delete_task(self):
         self.test_access_token()
@@ -167,6 +183,9 @@ class CommentTest(APITestCase):
         response = self.client.post('/tasks/1/comments/', data, 'json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
 
+        response = self.client.post('/tasks/1/comments/', "", 'json')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
+
     def test_get_comments(self):
         self.test_post_comment()
 
@@ -200,6 +219,12 @@ class TimeLogsTests(APITestCase):
         response = self.client.post('/tasks/', data, 'json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_get_timelogs(self):
+        self.test_create_task()
+
+        response = self.client.get('/tasks/1/timelogs/', data={'format': 'json'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_manual_time_log(self):
         self.test_create_task()
 
@@ -211,10 +236,32 @@ class TimeLogsTests(APITestCase):
         response = self.client.post('/tasks/1/timelogs/', data, 'json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
 
-    def test_top_task_by_last_month(self):
+        response = self.client.post('/tasks/1/timelogs/', "", 'json')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
+
+    def test_start_timelogs(self):
         self.test_create_task()
 
-        time.sleep(1)
+        response = self.client.post('/tasks/1/timelogs/start/')
+        self.assertEqual(response.status_code, HTTP_201_CREATED)
+
+        response = self.client.post('/tasks/1/timelogs/start/')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
+
+    def test_stop_timelogs(self):
+        self.test_start_timelogs()
+
+        response = self.client.post('/tasks/1/timelogs/stop/')
+        self.assertEqual(response.status_code, HTTP_200_OK)
+
+        response = self.client.post('/tasks/1/timelogs/stop/')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
+
+        response = self.client.post('/tasks/2/timelogs/stop/')
+        self.assertEqual(response.status_code, HTTP_400_BAD_REQUEST)
+
+    def test_top_task_by_last_month(self):
+        self.test_create_task()
 
         response = self.client.get('/timelogs/top20/')
         self.assertEqual(response.status_code, HTTP_200_OK)

@@ -38,3 +38,4 @@ class RegisterView(mixins.ListModelMixin, GenericViewSet):
             'refresh': str(refresh),
             'access': str(refresh.access_token)
         })
+

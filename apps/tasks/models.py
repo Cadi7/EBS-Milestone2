@@ -47,6 +47,7 @@ class Comment(models.Model):
         verbose_name_plural = 'Comments'
 
 
+"""
 @receiver(post_save, sender=Task, dispatch_uid='send_email_user')
 def send_email_user(sender, instance, **kwargs) -> None:
     change_data = kwargs['update_fields']
@@ -62,13 +63,10 @@ def send_email_user(sender, instance, **kwargs) -> None:
                 recipient_list=list(user_email),
                 fail_silently=False
             )
+"""
 
 
 class TimeLogQuerySet(QuerySet):
-    def with_total_time(self) -> 'TimeLogQuerySet':
-        return self.aggregate(
-            total_time=Sum('duration')
-        )
 
     def get_total_duration_each_user(self):
         return self.values(
@@ -87,33 +85,6 @@ class Timelog(models.Model):
     is_started = models.BooleanField(default=False)
     is_stopped = models.BooleanField(default=False)
     duration = models.IntegerField(default=0, blank=True)
-
-    @staticmethod
-    def get_total_duration_by_user(user_id: int) -> int:
-        return Timelog.objects.filter(
-            task__assigned_id=user_id
-        ).aggregate(
-            Sum('duration')
-        )['duration__sum'] or 0
-
-    @staticmethod
-    def get_total_duration_by_user_and_task(user_id: int, task_id: int) -> int:
-        return Timelog.objects.filter(
-            task__assigned_id=user_id,
-            task_id=task_id
-        ).aggregate(
-            Sum('duration')
-        )['duration__sum'] or 0
-
-    @staticmethod
-    def get_total_duration_by_user_and_task_and_date(user_id: int, task_id: int, date: str) -> int:
-        return Timelog.objects.filter(
-            task__assigned_id=user_id,
-            task_id=task_id,
-            start_time__date=date
-        ).aggregate(
-            Sum('duration')
-        )['duration]sum'] or 0
 
     class Meta:
         verbose_name = 'Time Log'

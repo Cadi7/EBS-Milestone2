@@ -24,6 +24,15 @@ class AccountTests(APITestCase):
 
         response = self.client.post('/users/register/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {
+            "first_name": "string",
+            "last_name": "string",
+            "username": "string",
+            "email": "",
+            "password": "string"
+        }
+        response = self.client.post('/users/register/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_access_token(self):
         """Create a user"""

@@ -1,6 +1,7 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.contrib.auth.models import AbstractUser, PermissionsMixin
+from rest_framework import status
 
 
 # Create your models here.
@@ -8,8 +9,6 @@ from django.contrib.auth.models import AbstractUser, PermissionsMixin
 class UserProfileManager(BaseUserManager):
 
     def create_user(self, first_name, last_name, email, password=None):
-        if not email:
-            raise ValueError('User must have an email address')
         user = self.model(
             first_name=first_name,
             last_name=last_name,
