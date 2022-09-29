@@ -14,9 +14,8 @@ from apps.users.serializers import ShortUserSerializer, UserSerializer
 class RegisterView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = ShortUserSerializer
     queryset = User.objects.all()
-    authentication_classes = [JWTAuthentication]
 
-    @action(methods=['post'], detail=False, url_path='register', permission_classes=[AllowAny], serializer_class=UserSerializer)
+    @action(methods=['post'], detail=False, permission_classes=[AllowAny], serializer_class=UserSerializer)
     def register(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
