@@ -74,9 +74,9 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.MultiPartRenderer',
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.TemplateHTMLRenderer'
-    ]
+    ],
+    'PAGE_SIZE': 100,
 }
-
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
@@ -193,6 +193,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 SWAGGER_SETTINGS = {
+    'DEFAULT_AUTO_SCHEMA_CLASS': 'drf_util.mixins.CustomAutoSchema',
     "SECURITY_DEFINITIONS": {
         "Bearer": {
             "name": "Authorization",

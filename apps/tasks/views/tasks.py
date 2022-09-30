@@ -1,9 +1,12 @@
+import time
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.deprecation import MiddlewareMixin
 from django.views.decorators.cache import cache_page
 from rest_framework import filters, status
 from rest_framework.decorators import action
@@ -157,6 +160,8 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return TimeLogCreateSerializer
+        if self.action == 'list':
+            return TimeLogUserDetailSerializer
         return super().get_serializer_class()
 
     def perform_create(self, serializer):
@@ -215,6 +220,11 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
 class TimeLogViewSet(ListModelMixin, GenericViewSet):
     serializer_class = TimeLogSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return TimeLogUserDetailSerializer
+        return super().get_serializer_class()
+
     def get_queryset(self):
         user_id = self.kwargs.get('user_pk')
         if self.action == 'list':
@@ -234,7 +244,7 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
         queryset = self.get_queryset()
         return Response(queryset, status=status.HTTP_200_OK)
 
-    @method_decorator(cache_page(10))
+    @method_decorator(cache_page(60))
     @action(methods=['get'], detail=False, serializer_class=TopTasksSerializer, url_path='top20')
     def top_20(self, request, *args, **kwargs):
         last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)

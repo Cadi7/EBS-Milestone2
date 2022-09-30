@@ -39,13 +39,13 @@ class TaskListSerializer(serializers.ModelSerializer):
         fields = ('id', 'title')
 
 
-class TaskAssignNewUserSerializer(serializers.ModelSerializer):
+class TaskAssignNewUserSerializer(TaskSerializer):
     class Meta:
         model = Task
         fields = ('assigned',)
 
 
-class TaskUpdateStatusSerializer(serializers.ModelSerializer):
+class TaskUpdateStatusSerializer(TaskSerializer):
     class Meta:
         model = Task
         fields = ('status',)
@@ -70,29 +70,24 @@ class TimeLogSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class TimeLogCreateSerializer(serializers.ModelSerializer):
+class TimeLogCreateSerializer(TimeLogSerializer):
     class Meta:
         model = Timelog
         fields = '__all__'
-
         extra_kwargs = {
             'user': {'read_only': True},
             'task': {'read_only': True}
         }
 
 
-class TimeLogUserDetailSerializer(serializers.ModelSerializer):
-    total_time = serializers.DurationField(read_only=True)
+class TimeLogUserDetailSerializer(TimeLogSerializer):
 
     class Meta:
         model = Timelog
-        fields = ('id', 'total_time', 'started_at', 'duration')
-        extra_kwargs = {
-            'started_at': {'read_only': True}
-        }
+        fields = ('id', 'duration')
 
 
-class TopTasksSerializer(serializers.ModelSerializer):
+class TopTasksSerializer(TaskSerializer):
     total_time = serializers.DurationField(read_only=True)
 
     class Meta:
@@ -101,7 +96,7 @@ class TopTasksSerializer(serializers.ModelSerializer):
         extra_kwargs = {'total_time': {'read_only': True}}
 
 
-class TaskTimeLogSerializer(serializers.ModelSerializer):
+class TaskTimeLogSerializer(TimeLogSerializer):
     time_logs = serializers.IntegerField()
 
     class Meta:
