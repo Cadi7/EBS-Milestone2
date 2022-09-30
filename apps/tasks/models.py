@@ -66,18 +66,7 @@ def send_email_user(sender, instance, **kwargs) -> None:
 """
 
 
-class TimeLogQuerySet(QuerySet):
-
-    def get_total_duration_each_user(self):
-        return self.values(
-            'task__id', 'task__title',
-        ).annotate(
-            total_time=Sum('duration')
-        )
-
-
 class Timelog(models.Model):
-    objects = TimeLogQuerySet.as_manager()
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='task_logs')
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='user_logs')

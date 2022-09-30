@@ -44,14 +44,11 @@ __all__ = [
 
 
 class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyModelMixin, GenericViewSet):
-    queryset = Task.objects.annotate(time_logs=Sum('task_logs__duration'))
-    serializer_class = TaskSerializer
+    queryset = Task.objects.all()
     permission_classes = (IsAuthenticated,)
+    serializer_class = TaskSerializer
     # filterset_fields = ['status']
     search_fields = ['title']
-
-    def perform_create(self, serializer):
-        serializer.save(assigned_id=self.request.user.id)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -60,6 +57,10 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
             return TaskAssignNewUserSerializer
         if self.action == 'create':
             return TaskSerializer
+        if self.action == 'update_status':
+            return TaskUpdateStatusSerializer
+        if self.action == 'retrieve':
+            return TaskTimeLogSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -69,13 +70,16 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
             return Task.objects.annotate(time_logs=Sum('task_logs__duration'))
         return Task.objects.all()
 
+    def perform_create(self, serializer):
+        serializer.save(assigned_id=self.request.user.id)
+
     @action(methods=['get'], url_path='my-tasks', detail=False, serializer_class=TaskListSerializer)
     def my_task(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['get'], url_path='completed_tasks', detail=False, serializer_class=TaskListSerializer)
+    @action(methods=['get'], url_path='completed-tasks', detail=False, serializer_class=TaskListSerializer)
     def completed_tasks(self, request, *args, **kwargs):
         queryset = self.queryset.filter(status=True)
         serializer = self.get_serializer(queryset, many=True)
@@ -146,25 +150,14 @@ class TaskCommentViewSet(CreateModelMixin, GenericViewSet):
                   settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
 
 
-class TaskTimeLogViewSet(CreateModelMixin, GenericViewSet):
+class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     queryset = Timelog.objects.all()
     serializer_class = TimeLogSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.action == 'create':
             return TimeLogCreateSerializer
         return super().get_serializer_class()
-
-    def get_queryset(self):
-        task_id: int = self.kwargs.get('task__pk')
-        return self.queryset.filter(task_id=task_id)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_pk')
@@ -220,13 +213,12 @@ class TaskTimeLogViewSet(CreateModelMixin, GenericViewSet):
 
 
 class TimeLogViewSet(ListModelMixin, GenericViewSet):
-    queryset = Timelog.objects.all()
-    serializer_class = TimeLogUserDetailSerializer
-    filter_backends = [filters.OrderingFilter]
-    ordering = ['-duration']
+    serializer_class = TimeLogSerializer
 
     def get_queryset(self):
         user_id = self.kwargs.get('user_pk')
+        if self.action == 'list':
+            return Timelog.objects.all()
         if self.action == 'top_20':
             return self.queryset.filter(user_id=user_id).values('task__id', 'task__title', ).annotate(
                 total_time=Sum('duration')
@@ -235,10 +227,10 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
             return self.queryset.filter(user=self.request.user,
                                         started_at__month=timezone.now().month,
                                         ).annotate(total_time=Sum('duration')).order_by('-total_time')
-        return self.queryset.filter(user_id=user_id)
+        return Timelog.objects.all()
 
     @action(methods=['get'], detail=False, url_path='time-logs-month')
-    def time_log_month(self, request, *args, **kwargs):
+    def time_log_month(self, *args, **kwargs):
         queryset = self.get_queryset()
         return Response(queryset, status=status.HTTP_200_OK)
 
