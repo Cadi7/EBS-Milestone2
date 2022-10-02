@@ -1,4 +1,4 @@
-import time
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
@@ -6,9 +6,8 @@ from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.deprecation import MiddlewareMixin
 from django.views.decorators.cache import cache_page
-from rest_framework import filters, status
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import (
     ListModelMixin,
@@ -19,7 +18,6 @@ from rest_framework.mixins import (
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.tasks.models import (
     Task,
@@ -219,34 +217,33 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
 
 class TimeLogViewSet(ListModelMixin, GenericViewSet):
     serializer_class = TimeLogSerializer
+    queryset = Timelog.objects.all()
+
+    def get_queryset(self):
+        if self.action == 'list':
+            return Timelog.objects.all()
+        if self.action == 'top_20':
+            last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
+            return self.queryset.filter(started_at__gt=last_month).annotate(
+               total_time=Sum('duration')).order_by('-total_time')[:20]
 
     def get_serializer_class(self):
         if self.action == 'list':
             return TimeLogUserDetailSerializer
+        if self.action == 'top_20':
+            return TopTasksSerializer
         return super().get_serializer_class()
 
-    def get_queryset(self):
-        user_id = self.kwargs.get('user_pk')
-        if self.action == 'list':
-            return Timelog.objects.all()
-        if self.action == 'top_20':
-            return self.queryset.filter(user_id=user_id).values('task__id', 'task__title', ).annotate(
-                total_time=Sum('duration')
-            ).order_by('-total_time')[:20]
-        if self.action == 'top_log_month':
-            return self.queryset.filter(user=self.request.user,
-                                        started_at__month=timezone.now().month,
-                                        ).annotate(total_time=Sum('duration')).order_by('-total_time')
-        return Timelog.objects.all()
-
-    @action(methods=['get'], detail=False, url_path='time-logs-month')
-    def time_log_month(self, *args, **kwargs):
-        queryset = self.get_queryset()
-        return Response(queryset, status=status.HTTP_200_OK)
-
     @method_decorator(cache_page(60))
-    @action(methods=['get'], detail=False, serializer_class=TopTasksSerializer, url_path='top20')
+    @action(methods=['get'], url_path='top-20', detail=False, serializer_class=TopTasksSerializer)
     def top_20(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        return Response(queryset.values('task_id', 'task__title').annotate(total_time=Sum('duration')), status=status.HTTP_200_OK)
+
+    @action(methods=['get'], url_path='month', detail=False)
+    def month(self, request):
         last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
-        queryset = self.get_queryset().filter(started_at__gte=last_month)
-        return Response(int(queryset), status=status.HTTP_200_OK)
+        queryset = Timelog.objects.filter(started_at__gt=last_month,
+                                          user=request.user.id).aggregate(sum=Sum('duration'))
+
+        return Response({"logged_time": queryset.values()}, status=status.HTTP_200_OK)

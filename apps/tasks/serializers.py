@@ -81,13 +81,12 @@ class TimeLogCreateSerializer(TimeLogSerializer):
 
 
 class TimeLogUserDetailSerializer(TimeLogSerializer):
-
     class Meta:
         model = Timelog
         fields = ('id', 'duration')
 
 
-class TopTasksSerializer(TaskSerializer):
+class TopTasksSerializer(serializers.ModelSerializer):
     total_time = serializers.DurationField(read_only=True)
 
     class Meta:
