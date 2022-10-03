@@ -66,7 +66,7 @@ class TasksTests(APITestCase):
 
     def test_completed_tasks(self):
         self.test_access_token()
-        response = self.client.get('/tasks/completed_tasks/', data={'format': 'json'})
+        response = self.client.get('/tasks/completed-tasks/', data={'format': 'json'})
         self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_detail_task(self):
@@ -125,11 +125,11 @@ class TasksTests(APITestCase):
         completed = response_json.get('status')
         self.assertEqual(completed, False)
 
-        response = self.client.get('/tasks/1/update/')
+        response = self.client.patch('/tasks/1/update/')
         self.assertEqual(response.status_code, HTTP_200_OK)
         task = Task.objects.get(id=1)
         self.assertEqual(task.status, True)
-        response = self.client.get('/tasks/123456/update/')
+        response = self.client.patch('/tasks/1256/update/')
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
     def test_delete_task(self):
@@ -263,15 +263,14 @@ class TimeLogsTests(APITestCase):
     def test_top_task_by_last_month(self):
         self.test_create_task()
 
-        response = self.client.get('/timelogs/top20/')
+        response = self.client.get('/timelogs/top-20/')
         self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_timelogs_last_month(self):
         self.test_create_task()
 
-        time.sleep(1)
 
-        response = self.client.get('/timelogs/time_logs_month/')
+        response = self.client.get('/timelogs/month/')
         self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_timelogs_summary(self):

@@ -59,7 +59,7 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
         if self.action == 'update_status':
             return TaskUpdateStatusSerializer
         if self.action == 'retrieve':
-            return TaskTimeLogSerializer
+            return TaskSerializer
         return super().get_serializer_class()
 
     def get_queryset(self):
@@ -120,15 +120,11 @@ class TaskViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, DestroyM
 
 
 class TaskCommentViewSet(CreateModelMixin, GenericViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-
-    def get_queryset(self):
-        task_id: int = self.kwargs.get('task__pk')
-        return self.queryset.filter(task_id=task_id)
+    queryset = Comment.objects.all()
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.get_queryset().filter(task_id=kwargs['task_pk'])
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -145,7 +141,7 @@ class TaskCommentViewSet(CreateModelMixin, GenericViewSet):
         return Response({"detail ": "Comment has been posted! Email was send to owner"}, status=status.HTTP_200_OK)
 
 
-class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
+class TaskTimeLogViewSet(CreateModelMixin, GenericViewSet):
     queryset = Timelog.objects.all()
     serializer_class = TimeLogSerializer
 
@@ -156,6 +152,10 @@ class TaskTimeLogViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             return TimeLogUserDetailSerializer
         return super().get_serializer_class()
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset().filter(task_id=kwargs['task_pk'])
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_pk')
         serializer.save(task_id=task_id, user=self.request.user, is_started=True, is_stopped=True)
@@ -215,8 +215,6 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
     queryset = Timelog.objects.all()
 
     def get_queryset(self):
-        if self.action == 'list':
-            return Timelog.objects.all()
         if self.action == 'top_20':
             last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
             return self.queryset.filter(started_at__gt=last_month).annotate(

@@ -9,7 +9,6 @@ services:
     command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_connections=200
     environment:
       - POSTGRES_DB=postgres
-      - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
@@ -24,6 +23,7 @@ services:
     depends_on:
       - db
     container_name: pghero
+
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -31,13 +31,10 @@ services:
       - .:/code
     ports:
       - "8000:8000"
-      - "5432:5432"
     environment:
       - POSTGRES_NAME=postgres
-      - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_HOST=db
       - DJANGO_SETTINGS_MODULE=config.settings
     depends_on:
       - db
