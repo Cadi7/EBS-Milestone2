@@ -39,12 +39,17 @@ class Task(models.Model):
 
 class Comment(models.Model):
     text = models.TextField()
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='comments')
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='comment_task')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_owner')
 
     class Meta:
         verbose_name = 'Comment'
         verbose_name_plural = 'Comments'
+
+    @staticmethod
+    def send_user_email(message: str, subject: str, recipient: Union[QuerySet, set, str]) -> None:
+        send_mail(message=message, subject=subject, from_email=settings.EMAIL_HOST_USER, recipient_list=[recipient],
+                  fail_silently=False)
 
 
 """
@@ -67,7 +72,6 @@ def send_email_user(sender, instance, **kwargs) -> None:
 
 
 class Timelog(models.Model):
-
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, related_name='task_logs')
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='user_logs')
     started_at = models.DateTimeField(default=timezone.now, blank=True)
