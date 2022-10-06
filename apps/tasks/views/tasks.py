@@ -56,7 +56,6 @@ class TaskViewSet(
     queryset = Task.objects.all()
     permission_classes = (IsAuthenticated,)
     serializer_class = TaskSerializer
-    # filterset_fields = ['status']
     search_fields = ["title"]
 
     def get_serializer_class(self):
@@ -141,10 +140,7 @@ class TaskViewSet(
             task.save()
 
             task.comment_task.values_list("owner__email", flat=True)
-            emails = [
-                email
-                for email in task.comment_task.values_list("owner__email", flat=True)
-            ]
+            emails = list(task.comment_task.values_list("owner__email", flat=True))
             emails.append(task.assigned.email)
             emails = list(set(emails))
             send_mail(
@@ -251,7 +247,7 @@ class TaskTimeLogViewSet(CreateModelMixin, GenericViewSet):
             instance.is_started = False
             instance.save()
             return Response(
-                {"Detail: ": "Timelog has been stopped", f"Duration": {duration}},
+                {"Detail: ": "Timelog has been stopped", "Duration": {duration}},
                 status=status.HTTP_200_OK,
             )
         else:
