@@ -11,4 +11,3 @@ def custom_exception_handler(exc, context):
         return Response(response.data, status=status.HTTP_401_UNAUTHORIZED)
 
     return response
-
