@@ -15,26 +15,26 @@ class RegisterView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = ShortUserSerializer
     queryset = User.objects.all()
 
-    @action(methods=['post'], detail=False, permission_classes=[AllowAny], serializer_class=UserSerializer)
+    @action(
+        methods=["post"],
+        detail=False,
+        permission_classes=[AllowAny],
+        serializer_class=UserSerializer,
+    )
     def register(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = User.objects.create(
-            first_name=serializer.validated_data['first_name'],
-            last_name=serializer.validated_data['last_name'],
-            email=serializer.validated_data['email'],
-            is_superuser=False
-
+            first_name=serializer.validated_data["first_name"],
+            last_name=serializer.validated_data["last_name"],
+            email=serializer.validated_data["email"],
+            is_superuser=False,
         )
 
-        user.set_password(serializer.validated_data['password'])
+        user.set_password(serializer.validated_data["password"])
         user.save()
 
         refresh = RefreshToken.for_user(user)
 
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token)
-        })
-
+        return Response({"refresh": str(refresh), "access": str(refresh.access_token)})
