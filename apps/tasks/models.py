@@ -30,7 +30,7 @@ class Task(models.Model):
 
     @staticmethod
     def send_user_email(
-        message: str, subject: str, recipient: Union[QuerySet, set, str]
+            message: str, subject: str, recipient: Union[QuerySet, set, str]
     ) -> None:
         send_mail(
             message=message,
@@ -56,7 +56,7 @@ class Comment(models.Model):
 
     @staticmethod
     def send_user_email(
-        message: str, subject: str, recipient: Union[QuerySet, set, str]
+            message: str, subject: str, recipient: Union[QuerySet, set, str]
     ) -> None:
         send_mail(
             message=message,
@@ -65,25 +65,6 @@ class Comment(models.Model):
             recipient_list=[recipient],
             fail_silently=False,
         )
-
-
-"""
-@receiver(post_save, sender=Task, dispatch_uid='send_email_user')
-def send_email_user(sender, instance, **kwargs) -> None:
-    change_data = kwargs['update_fields']
-    status = instance.status
-    if change_data is not None:
-        if 'status' in change_data and status is False:
-            user_email = Task.objects.filter(pk=instance.id).select_related('assigned_to').values_list(
-                'assigned_to__email', flat=True)
-            send_mail(
-                message=f'Admin changed you task status to Undone!',
-                subject=f'You have one undone Task. Id:{instance.id}',
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=list(user_email),
-                fail_silently=False
-            )
-"""
 
 
 class Timelog(models.Model):
