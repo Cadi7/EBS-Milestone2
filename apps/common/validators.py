@@ -6,7 +6,6 @@ DEFAULT_FIELD = "pk"
 
 
 class ObjectValidator(object):
-
     def __init__(self, model, field=None):
         self.model = model
         self.field = field if field else DEFAULT_FIELD
@@ -29,12 +28,9 @@ class ObjectIdSerializer(serializers.Serializer):
 
 
 class ObjectIdValidator(object):
-
     def __call__(self, value):
-        serializer = ObjectIdSerializer(data={
-            'object_id': value
-        })
+        serializer = ObjectIdSerializer(data={"object_id": value})
         if not serializer.is_valid():
-            raise serializers.ValidationError(serializer.errors.get('object_id'))
+            raise serializers.ValidationError(serializer.errors.get("object_id"))
 
         return value
