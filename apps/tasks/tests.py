@@ -1,8 +1,3 @@
-import datetime
-import coverage
-
-import time
-
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
@@ -12,7 +7,7 @@ from rest_framework.status import (
 )
 from rest_framework.test import APITestCase
 
-from apps.tasks.models import Task, Comment, Timelog
+from apps.tasks.models import Task
 from apps.users.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
