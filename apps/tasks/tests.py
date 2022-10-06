@@ -38,11 +38,16 @@ class TasksTests(APITestCase):
         email = "finicacr7@gmail.com"
         password = "1234"
         self.user = User.objects.create_user(email, email, password)
-        jwt_fetch_data = {"email": email, "password": password}
-
-        response = self.client.post("/users/login/", jwt_fetch_data, "json")
         token = get_tokens_for_user(self.user).get("access")
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_login(self):
+        data = {
+            "email": "finicacr7@gmail.com",
+            "password": "1234"
+        }
+        response = self.client.post("/users/login/", data, "json")
+        self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_create_task(self):
         self.test_access_token()
@@ -148,9 +153,7 @@ class CommentTest(APITestCase):
         email = "cristianfnc7@gmail.com"
         password = "1234"
         self.user = User.objects.create_user(email, email, password)
-        jwt_fetch_data = {"email": email, "password": password}
 
-        response = self.client.post("/users/login/", jwt_fetch_data, "json")
         token = get_tokens_for_user(self.user).get("access")
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 

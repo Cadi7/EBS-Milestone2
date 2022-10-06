@@ -27,7 +27,7 @@ environ.Env.read_env(f"{BASE_DIR}/.env")
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 DEBUG_LEVEL = "DEBUG"
 ALLOWED_HOSTS = []
 AUTH_USER_MODEL = "users.User"
@@ -113,7 +113,7 @@ TEMPLATES = [
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": "redis://localhost:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },

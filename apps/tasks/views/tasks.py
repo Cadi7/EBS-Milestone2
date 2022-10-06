@@ -104,7 +104,7 @@ class TaskViewSet(
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=["patch"], detail=True, url_path="assign")
+    @action(methods=["patch"], detail=True)
     def assign(self, request, *args, **kwargs):
         instance: Task = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
