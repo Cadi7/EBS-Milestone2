@@ -56,7 +56,8 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = "__all__"
-        extra_kwargs = {"task": {"read_only": True}, "owner": {"read_only": True}}
+        extra_kwargs = {"task": {"read_only": True},
+                        "owner": {"read_only": True}}
 
 
 class TimeLogSerializer(serializers.ModelSerializer):
@@ -69,7 +70,8 @@ class TimeLogCreateSerializer(TimeLogSerializer):
     class Meta:
         model = Timelog
         fields = "__all__"
-        extra_kwargs = {"user": {"read_only": True}, "task": {"read_only": True}}
+        extra_kwargs = {"user": {"read_only": True},
+                        "task": {"read_only": True}}
 
 
 class TimeLogUserDetailSerializer(TimeLogSerializer):
