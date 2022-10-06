@@ -11,7 +11,8 @@ from apps.tasks.views.tasks import (
 base_router = DefaultRouter()
 
 base_router.register(prefix=r"tasks", viewset=TaskViewSet, basename="tasks")
-base_router.register(prefix=r"timelogs", viewset=TimeLogViewSet, basename="timelogs")
+base_router.register(prefix=r"timelogs",
+                     viewset=TimeLogViewSet, basename="timelogs")
 
 nested_router = NestedSimpleRouter(
     parent_router=base_router, parent_prefix=r"tasks", lookup="task"

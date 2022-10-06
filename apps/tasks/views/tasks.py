@@ -141,7 +141,8 @@ class TaskViewSet(
             task.save()
 
             task.comment_task.values_list("owner__email", flat=True)
-            emails = list(task.comment_task.values_list("owner__email", flat=True))
+            emails = list(task.comment_task.values_list(
+                "owner__email", flat=True))
             emails.append(task.assigned.email)
             emails = list(set(emails))
             send_mail(

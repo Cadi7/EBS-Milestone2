@@ -73,7 +73,8 @@ class TasksTests(APITestCase):
 
     def test_completed_tasks(self):
         self.test_access_token()
-        response = self.client.get("/tasks/completed-tasks/", data={"format": "json"})
+        response = self.client.get(
+            "/tasks/completed-tasks/", data={"format": "json"})
         self.assertEqual(response.status_code, HTTP_200_OK)
 
     def test_detail_task(self):
@@ -112,7 +113,8 @@ class TasksTests(APITestCase):
     def test_complete_task(self):
         self.test_access_token()
 
-        data = {"title": "stringstring", "description": "string", "status": False}
+        data = {"title": "stringstring",
+                "description": "string", "status": False}
 
         response = self.client.post("/tasks/", data, "json")
         self.assertEqual(response.status_code, HTTP_201_CREATED)
@@ -139,7 +141,8 @@ class TasksTests(APITestCase):
 
 
 class CommentTest(APITestCase):
-    fixtures = ["tasks_fixtures.json", "users_fixtures.json", "comments_fixtures.json"]
+    fixtures = ["tasks_fixtures.json",
+                "users_fixtures.json", "comments_fixtures.json"]
 
     def test_access_token(self):
         email = "cristianfnc7@gmail.com"
@@ -171,12 +174,14 @@ class CommentTest(APITestCase):
     def test_get_comments(self):
         self.test_post_comment()
 
-        response = self.client.get("/tasks/1/comments/", data={"format": "json"})
+        response = self.client.get(
+            "/tasks/1/comments/", data={"format": "json"})
         self.assertEqual(response.status_code, HTTP_200_OK)
 
 
 class TimeLogsTests(APITestCase):
-    fixtures = ["tasks_fixtures.json", "users_fixtures.json", "timelogs_fixtures.json"]
+    fixtures = ["tasks_fixtures.json",
+                "users_fixtures.json", "timelogs_fixtures.json"]
 
     def test_access_token(self):
         email = "krystiano@mail.ru"
@@ -201,7 +206,8 @@ class TimeLogsTests(APITestCase):
     def test_get_timelogs(self):
         self.test_create_task()
 
-        response = self.client.get("/tasks/1/timelogs/", data={"format": "json"})
+        response = self.client.get(
+            "/tasks/1/timelogs/", data={"format": "json"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_manual_time_log(self):
