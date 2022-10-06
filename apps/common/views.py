@@ -8,7 +8,8 @@ class HealthView(GenericAPIView):
     authentication_classes = ()
     permission_classes = (AllowAny,)
 
-    def get(self, request):
+    @staticmethod
+    def get(request):
         return Response(
             {
                 "live": True,
@@ -17,7 +18,8 @@ class HealthView(GenericAPIView):
 
 
 class ProtectedTestView(GenericAPIView):
-    def get(self, request):
+    @staticmethod
+    def get(request):
         return Response(
             {
                 "live": True,
