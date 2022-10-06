@@ -30,7 +30,7 @@ class Task(models.Model):
 
     @staticmethod
     def send_user_email(
-            message: str, subject: str, recipient: Union[QuerySet, set, str]
+        message: str, subject: str, recipient: Union[QuerySet, set, str]
     ) -> None:
         send_mail(
             message=message,
@@ -56,7 +56,7 @@ class Comment(models.Model):
 
     @staticmethod
     def send_user_email(
-            message: str, subject: str, recipient: Union[QuerySet, set, str]
+        message: str, subject: str, recipient: Union[QuerySet, set, str]
     ) -> None:
         send_mail(
             message=message,

@@ -37,10 +37,7 @@ class TasksTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
     def test_login(self):
-        data = {
-            "email": "finicacr7@gmail.com",
-            "password": "1234"
-        }
+        data = {"email": "finicacr7@gmail.com", "password": "1234"}
         response = self.client.post("/users/login/", data, "json")
         self.assertEqual(response.status_code, HTTP_200_OK)
 
