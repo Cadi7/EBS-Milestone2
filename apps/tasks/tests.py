@@ -1,4 +1,3 @@
-
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
