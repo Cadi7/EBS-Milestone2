@@ -20,7 +20,8 @@ class Command(BaseCommand):
         start = datetime.now()
         user = User.objects.first()
         for _ in range(25000):
-            random_title = "".join(random.choice(random_letters) for _ in range(20))
+            random_title = "".join(random.choice(random_letters)
+                                   for _ in range(20))
             random_description = "".join(
                 random.choice(random_letters) for _ in range(60)
             )
