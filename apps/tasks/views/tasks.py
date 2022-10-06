@@ -219,10 +219,13 @@ class TimeLogViewSet(ListModelMixin, GenericViewSet):
             last_month = timezone.now() - timezone.timedelta(days=timezone.now().day)
             return self.queryset.filter(started_at__gt=last_month).annotate(
                 total_time=Sum('duration')).order_by('-total_time')[:20]
+        if self.action == 'list':
+            return Timelog.objects.all()
+        return super().get_queryset()
 
     def get_serializer_class(self):
         if self.action == 'list':
-            return TimeLogUserDetailSerializer
+            return TimeLogSerializer
         if self.action == 'top_20':
             return TopTasksSerializer
         return super().get_serializer_class()
