@@ -3,6 +3,9 @@
 import os
 import sys
 
+from django.contrib.auth.management.commands import createsuperuser
+from django.core.management import CommandError
+
 
 def main():
     """Run administrative tasks."""
