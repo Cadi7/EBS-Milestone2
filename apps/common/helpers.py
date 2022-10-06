@@ -19,16 +19,18 @@ LIST_TYPES = [list, ReturnList]
 schema_view = get_schema_view(
     openapi.Info(
         title="API Documentation",
-        default_version='v1',
+        default_version="v1",
         description="Enjoy",
     ),
-    validators=['ssv'],
+    validators=["ssv"],
     public=True,
-    permission_classes=(AllowAny,)
+    permission_classes=(AllowAny,),
 )
 
 
-def send_html_message(emails: List, title: str, template_path: str, context: Dict) -> None:
+def send_html_message(
+    emails: List, title: str, template_path: str, context: Dict
+) -> None:
     """
     Send email by text template
     :param title: title message
@@ -48,12 +50,9 @@ def send_html_message(emails: List, title: str, template_path: str, context: Dic
     html = render_to_string(template_path, context)
 
     msg = EmailMessage(
-        title,
-        html,
-        to=emails,
-        from_email='Tribes <%s>' % settings.EMAIL_HOST_USER
+        title, html, to=emails, from_email="Tribes <%s>" % settings.EMAIL_HOST_USER
     )
-    msg.content_subtype = 'html'
+    msg.content_subtype = "html"
     try:
         msg.send()
     except Exception:
@@ -62,22 +61,14 @@ def send_html_message(emails: List, title: str, template_path: str, context: Dic
 
 def elastic_text_search(field: str, value: str):
     return {
-        'bool': {
+        "bool": {
             "should": [
+                {"match": {field: {"query": value, "operator": "or"}}},
                 {
-                    'match': {
-                        field: {
-                            'query': value,
-                            'operator': 'or'
-                        }
-                    }
-                },
-                {
-                    'bool': {
-                        'must': [
-                            {'prefix': {
-                                field: item
-                            }} for item in value.lower().split(' ')
+                    "bool": {
+                        "must": [
+                            {"prefix": {field: item}}
+                            for item in value.lower().split(" ")
                         ]
                     }
                 },
@@ -88,10 +79,10 @@ def elastic_text_search(field: str, value: str):
                             "boost": 1.0,
                             "fuzziness": 2,
                             "prefix_length": 0,
-                            "max_expansions": 100
+                            "max_expansions": 100,
                         }
                     }
-                }
+                },
             ]
         }
     }
