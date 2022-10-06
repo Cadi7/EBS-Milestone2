@@ -45,7 +45,7 @@ You can use this project as a cheat sheet.
 4. Timelog start timer `POST | tasks/{task__pk}/timelogs/start/`
 5. Timelog stop timer `POST | tasks/{task__pk}/timelogs/stop/`
 6. Logged time in last month `GET | timelogs/month/`
-7. Summary of timelogs for one task |GET | tasks/{task_pk}/timelogs/summary`
+7. Summary of timelogs for one task `GET | tasks/{task_pk}/timelogs/summary`
 8. Top 20 tasks in last month `GET | timelogs/top-20/`
 
   
