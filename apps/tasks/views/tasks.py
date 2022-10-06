@@ -251,7 +251,7 @@ class TaskTimeLogViewSet(CreateModelMixin, GenericViewSet):
             instance.is_started = False
             instance.save()
             return Response(
-                {"Detail: ": "Timelog has been stopped", f"Duration": {duration}},
+                {"Detail: ": "Timelog has been stopped", "Duration": {duration}},
                 status=status.HTTP_200_OK,
             )
         else:
