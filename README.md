@@ -12,6 +12,7 @@ You can use this project as a cheat sheet.
 - [Django](https://www.djangoproject.com/)
 - [Django Rest Framework](https://www.django-rest-framework.org/)
 - [Swagger](https://swagger.io/docs/specification/2-0/what-is-swagger/)
+- [Docker](https://docs.docker.com/samples/django/)
 
 ## Installation
 1. Clone project `git clone https://github.com/Cadi7/EBS-Milestone2.git`
@@ -38,13 +39,13 @@ You can use this project as a cheat sheet.
 1. Comment detail `GET | tasks/{task__pk}/comments`
 2. Create comment `POST | tasks/{task__pk}/comments`
 ### TimeLogs:
-1. Timelog list `GET | timelogs/`
+1. Timelogs list `GET | timelogs/`
 2. Timelog task detail `GET | tasks/{task__pk}/timelogs/`
 3. Create task timelog `POST | tasks/{task__pk}/timelogs/`
 4. Timelog start timer `POST | tasks/{task__pk}/timelogs/start/`
 5. Timelog stop timer `POST | tasks/{task__pk}/timelogs/stop/`
 6. Logged time in last month `GET | timelogs/month/`
 7. Summary of timelogs for one task |GET | tasks/{task_pk}/timelogs/summary`
-8. Top 20 tasks in last month `GET | timelogs/top-20/
+8. Top 20 tasks in last month `GET | timelogs/top-20/`
 
   
