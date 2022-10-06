@@ -57,7 +57,6 @@ class TaskViewSet(
     queryset = Task.objects.all()
     permission_classes = (IsAuthenticated,)
     serializer_class = TaskSerializer
-    # filterset_fields = ['status']
     search_fields = ["title"]
 
     def get_serializer_class(self):
