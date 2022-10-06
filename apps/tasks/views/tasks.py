@@ -34,6 +34,7 @@ from apps.tasks.serializers import (
     TopTasksSerializer,
     TaskTimeLogSerializer,
 )
+from config import settings
 from config.settings import EMAIL_HOST_USER
 
 User = get_user_model()
