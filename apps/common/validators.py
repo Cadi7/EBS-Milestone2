@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError
 DEFAULT_FIELD = "pk"
 
 
-class ObjectValidator(object):
+class ObjectValidator:
     def __init__(self, model, field=None):
         self.model = model
         self.field = field if field else DEFAULT_FIELD
@@ -27,7 +27,7 @@ class ObjectIdSerializer(serializers.Serializer):
     object_id = serializers.CharField(min_length=24, max_length=24, required=True)
 
 
-class ObjectIdValidator(object):
+class ObjectIdValidator:
     def __call__(self, value):
         serializer = ObjectIdSerializer(data={"object_id": value})
         if not serializer.is_valid():
